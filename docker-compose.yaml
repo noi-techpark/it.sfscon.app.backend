@@ -1,0 +1,58 @@
+services:
+
+  redis:
+
+    command: redis-server
+    hostname: redis
+    image: redis:alpine
+    labels:
+      NAME: redis
+
+  conferences:
+    build:
+      context: .
+      dockerfile: src/docker/Dockerfile.conferences
+    command: uvicorn main:app --host 0.0.0.0 --reload # sleep 9999999999
+    depends_on:
+    - redis
+    env_file:
+    - .env
+    volumes:
+    - ./src/:/app
+    - /var/log/opencon:/var/log/opencon
+    ports:
+    - 8000:8000
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+        
+  telegram:
+    build:
+      context: .
+      dockerfile: src/docker/Dockerfile.telegram
+    
+    command: python workers/telegram.py # sleep 99999
+    depends_on:
+    - redis
+    - conferences
+    env_file:
+    - .env
+    volumes:
+    - ./src/:/app
+    - /var/log/opencon:/var/log/opencon
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+  
+  push_notifications:
+    build:
+      context: .
+      dockerfile: src/docker/Dockerfile.push_notifications
+    
+    command: python workers/push_notifications.py # sleep 99999
+    depends_on:
+    - redis
+    - conferences
+    env_file:
+    - .env
+    volumes:
+    - ./src/:/app
+    - /var/log/opencon:/var/log/opencon

@@ -1,0 +1,9 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: OpenCON
+Upstream-Contact: DigitalCUBE <info@digitalcube.rs>
+Source: https://m.opencon.dev/
+
+Files: .gitignore *.sample .env.sample docker-compose.yaml src/*.py src/*.yaml src/*.xml src/docker/* README.md requirements.txt src/pyproject.toml src/tests/assets/fake_attendees.json src/tests/pytest.ini
+Copyright: 2023 DigitalCUBE <info@digitalcube.rs>
+License: GPL-3.0-or-later
+

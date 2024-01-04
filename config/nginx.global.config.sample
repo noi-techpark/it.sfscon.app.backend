@@ -1,0 +1,58 @@
+upstream oneservices { ip_hash; server 127.0.0.1:8080 max_fails=3  fail_timeout=300s; }
+upstream apilogger { ip_hash; server 127.0.0.1:8888 max_fails=3  fail_timeout=300s; }
+
+server {
+        listen 80 default;
+	root /home/digital/app/frontend/dist;
+
+	server_name stage.opencon.dev;
+	
+	client_max_body_size 20M;
+
+	location /static {
+		root /home/digital/app/impresaone;
+	}
+
+	location / {
+		index  index.html;
+		try_files $uri $uri/ /index.html;
+	}
+
+        location /pretix { 
+                proxy_pass http://apilogger;   proxy_redirect off; proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-For $remote_addr; 
+
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "Upgrade";
+                proxy_read_timeout 3600s;
+
+        }
+	
+        location /api/v3 { 
+                proxy_pass http://oneservices;   proxy_redirect off; proxy_set_header Host $host; proxy_set_header X-Real-IP $remote_addr; proxy_set_header X-Forwarded-For $remote_addr; 
+
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "Upgrade";
+                proxy_read_timeout 3600s;
+        }
+
+	location /qr-codes {
+		root /home/digital/app;
+		index  index.html;
+		# try_files $uri $uri/ index.html;
+	}
+		
+        proxy_buffering off;
+
+	# for sfscon mobile app forgot password
+	# rewrite ^/forgot-password(.*)$ sfscon://reset-password$1 permanent;
+	rewrite ^/password-redirect(.*)$ sfscon://reset-password$1 permanent;
+	# rewrite ^/password-redirect-expo-go(.*)$ sfscon://reset-password$1 permanent;
+
+        rewrite ^/api/v3/(.*)$ /api/v3/$1 break;
+        rewrite ^/pretix/(.*)$ /pretix/$1 break;
+        rewrite ^/qr-codes(.*)$ /qr-codes$1 break;
+        rewrite ^/(.*)$ /$1 break;
+}
+
