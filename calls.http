@@ -38,3 +38,31 @@ Authorization: Token {{token}}
 GET {{endpoint}}/organizers/noi-digital/events/sfscon23/checkinlists/313919/status
 Host: pretix.eu
 Authorization: Token {{token}}
+
+#########################
+# create conf checkin list status
+#########################
+
+@api=http://localhost:8000
+
+GET {{api}}/openapi.json
+Content-Type: application/json
+
+#########################
+# create conf checkin list status
+#########################
+
+POST {{api}}/api/conferences
+Content-Type: application/json
+
+{
+    "default": "True",
+    "force": "True"
+}
+
+#########################
+# get conferences
+#########################
+
+GET {{api}}/api/conferences
+Content-Type: application/json
