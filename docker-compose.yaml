@@ -1,7 +1,6 @@
 services:
 
   redis:
-
     command: redis-server
     hostname: redis
     image: redis:alpine
@@ -56,3 +55,13 @@ services:
     volumes:
     - ./src/:/app
     - /var/log/opencon:/var/log/opencon
+
+  postgres:
+    image: "postgres:14-alpine"
+    environment:
+      POSTGRES_DB: sfscon
+      POSTGRES_USER: sfscon
+      POSTGRES_PASSWORD: sfscon
+    hostname: postgres
+    volumes:
+      - /tmp/epaper_pgdata:/var/lib/postgresql/data
