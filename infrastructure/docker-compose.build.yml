@@ -1,0 +1,25 @@
+services:
+  
+  conferences:
+    image: ${DOCKER_IMAGE_CONFERENCES}:${DOCKER_TAG}
+    env_file: 
+      - ../.env
+    build:
+      context: ../
+      dockerfile: infrastructure/docker/Dockerfile.conferences
+  
+  push_notifications:
+    image: ${DOCKER_IMAGE_PUSH_NOTIFICATIONS}:${DOCKER_TAG}
+    env_file: 
+      - ../.env
+    build:
+      context: ../
+      dockerfile: infrastructure/docker/Dockerfile.push_notifications
+  
+  telegram:
+    image: ${DOCKER_IMAGE_TELEGRAM}:${DOCKER_TAG}
+    env_file: 
+      - ../.env
+    build:
+      context: ../
+      dockerfile: infrastructure/docker/Dockerfile.telegram
