@@ -6,7 +6,7 @@ services:
     env_file: 
       - ../.env
     ports:
-      - "${SERVER_PORT_CONFERENCES}:8000"
+      - ${SERVER_PORT_CONFERENCES}:8000
     volumes:
       - opencon-logs:/var/log/opencon
 
@@ -16,7 +16,7 @@ services:
     env_file: 
       - ../.env
     ports:
-      - "${SERVER_PORT_PUSH_NOTIFICATIONS}:8080"
+      - ${SERVER_PORT_PUSH_NOTIFICATIONS}:8080
     volumes:
       - opencon-logs:/var/log/opencon
 
@@ -26,7 +26,7 @@ services:
     env_file: 
       - ../.env
     ports:
-      - "${SERVER_PORT_TELEGRAM}:8080"
+      - ${SERVER_PORT_TELEGRAM}:8080
     volumes:
       - opencon-logs:/var/log/opencon
   
