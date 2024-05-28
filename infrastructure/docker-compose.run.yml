@@ -1,7 +1,7 @@
 services:
 
   conferences:
-    image: ${DOCKER_IMAGE_CONFERENCES}:${DOCKER_TAG}
+    image: ${DOCKER_IMAGE}:${DOCKER_TAG}
     command: uvicorn main:app --host 0.0.0.0 --reload # sleep 9999999999
     env_file: 
       - .env
@@ -11,7 +11,7 @@ services:
       - opencon-logs:/var/log/opencon
 
   push_notifications:
-    image: ${DOCKER_IMAGE_PUSH_NOTIFICATIONS}:${DOCKER_TAG}
+    image: ${DOCKER_IMAGE}:${DOCKER_TAG}
     command: python workers/push_notifications.py # sleep 99999
     env_file: 
       - .env
@@ -21,7 +21,7 @@ services:
       - opencon-logs:/var/log/opencon
 
   telegram:
-    image: ${DOCKER_IMAGE_TELEGRAM}:${DOCKER_TAG}
+    image: ${DOCKER_IMAGE}:${DOCKER_TAG}
     command: python workers/telegram.py # sleep 99999
     env_file: 
       - .env

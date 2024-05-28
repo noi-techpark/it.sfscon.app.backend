@@ -6,9 +6,6 @@ on:
 
 env:
   PROJECT_NAME: sfscon-backend
-  DOCKER_IMAGE_CONFERENCES: ghcr.io/${{ github.repository }}/sfscon-conferences
-  DOCKER_IMAGE_PUSH_NOTIFICATIONS: ghcr.io/${{ github.repository }}/sfscon-push-notifications
-  DOCKER_IMAGE_TELEGRAM: ghcr.io/${{ github.repository }}/sfscon-telegram
   
 
 jobs:
@@ -21,6 +18,7 @@ jobs:
       SERVER_PORT_PUSH_NOTIFICATIONS: 1006
       SERVER_PORT_TELEGRAM: 1007
       DOCKER_TAG: ${{ github.sha }}-test
+      DOCKER_IMAGE: ghcr.io/${{ github.repository }}/sfscon-backend-test
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -34,9 +32,7 @@ jobs:
           X_SERVER_PORT_PUSH_NOTIFICATIONS: ${{ env.SERVER_PORT_PUSH_NOTIFICATIONS }}
           X_SERVER_PORT_TELEGRAM: ${{ env.SERVER_PORT_TELEGRAM }}
           
-          X_DOCKER_IMAGE_CONFERENCES: ${{ env.DOCKER_IMAGE_CONFERENCES }}
-          X_DOCKER_IMAGE_PUSH_NOTIFICATIONS: ${{ env.DOCKER_IMAGE_PUSH_NOTIFICATIONS }}
-          X_DOCKER_IMAGE_TELEGRAM: ${{ env.DOCKER_IMAGE_TELEGRAM }}
+          X_DOCKER_IMAGE: ${{ env.DOCKER_IMAGE}}
           X_DOCKER_TAG: ${{ env.DOCKER_TAG }}
 
       - name: Build and push images
@@ -62,6 +58,7 @@ jobs:
 #    # needs: test
 #    concurrency: deploy-prod
 #    env:
+#      DOCKER_IMAGE: ghcr.io/${{ github.repository }}/sfscon-backend
 #      SERVER_PORT_CONFERENCES: 1005
 #      SERVER_PORT_PUSH_NOTIFICATIONS: 1006
 #      SERVER_PORT_TELEGRAM: 1007
@@ -78,9 +75,7 @@ jobs:
 #          X_SERVER_PORT_CONFERENCE: ${{ env.SERVER_PORT_CONFERENCE }}
 #          X_SERVER_PORT_PUSH_NOTIFICATIONS: ${{ env.SERVER_PORT_PUSH_NOTIFICATIONS }}
 #          X_SERVER_PORT_TELEGRAM: ${{ env.SERVER_PORT_TELEGRAM }}
-#          X_DOCKER_IMAGE_CONFERENCES: ${{ env.DOCKER_IMAGE_CONFERENCES }}
-#          X_DOCKER_IMAGE_PUSH_NOTIFICATIONS: ${{ env.DOCKER_IMAGE_PUSH_NOTIFICATIONS }}
-#          X_DOCKER_IMAGE_TELEGRAM: ${{ env.DOCKER_IMAGE_TELEGRAM }}
+#          X_DOCKER_IMAGE: ${{ env.DOCKER_IMAGE}}
 #          X_DOCKER_TAG: ${{ env.DOCKER_TAG }}
 #
 #      - name: Build and push images
