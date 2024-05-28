@@ -6,7 +6,10 @@ on:
 
 env:
   PROJECT_NAME: sfscon-backend
-  DOCKER_IMAGE: ghcr.io/${{ github.repository }}/sfscon-backend
+  DOCKER_IMAGE_CONFERENCES: ghcr.io/${{ github.repository }}/sfscon-conferences
+  DOCKER_IMAGE_PUSH_NOTIFICATION: ghcr.io/${{ github.repository }}/sfscon-push-notifications
+  DOCKER_IMAGE_TELEGRAM: ghcr.io/${{ github.repository }}/sfscon-telegram
+  
 
 jobs:
   deploy-test:
@@ -26,7 +29,9 @@ jobs:
           working-directory: ${{ env.WORKING_DIRECTORY }}
         env:
           X_SERVER_PORT: ${{ env.SERVER_PORT }}
-          X_DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}
+          X_DOCKER_IMAGE_CONFERENCES: ${{ env.DOCKER_IMAGE_CONFERENCES }}
+          X_DOCKER_IMAGE_PUSH_NOTIFICATION: ${{ env.DDOCKER_IMAGE_PUSH_NOTIFICATION }}
+          X_DOCKER_IMAGE_TELEGRAM: ${{ env.DOCKER_IMAGE_TELEGRAM }}
           X_DOCKER_TAG: ${{ env.DOCKER_TAG }}
 
       - name: Build and push images
@@ -64,7 +69,9 @@ jobs:
 #          working-directory: ${{ env.WORKING_DIRECTORY }}
 #        env:
 #          X_SERVER_PORT: ${{ env.SERVER_PORT }}
-#          X_DOCKER_IMAGE: ${{ env.DOCKER_IMAGE }}
+#          X_DOCKER_IMAGE_CONFERENCES: ${{ env.DOCKER_IMAGE_CONFERENCES }}
+#          X_DOCKER_IMAGE_PUSH_NOTIFICATION: ${{ env.DDOCKER_IMAGE_PUSH_NOTIFICATION }}
+#          X_DOCKER_IMAGE_TELEGRAM: ${{ env.DOCKER_IMAGE_TELEGRAM }}
 #          X_DOCKER_TAG: ${{ env.DOCKER_TAG }}
 #
 #      - name: Build and push images
