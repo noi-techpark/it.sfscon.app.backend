@@ -4,9 +4,9 @@ services:
     image: ${DOCKER_IMAGE_CONFERENCES}:${DOCKER_TAG}
     command: uvicorn main:app --host 0.0.0.0 --reload # sleep 9999999999
     env_file: 
-      - ../.env
+      - .env
     ports:
-      - ${SERVER_PORT_CONFERENCES}:8000
+      - "${SERVER_PORT_CONFERENCES}:8000"
     volumes:
       - opencon-logs:/var/log/opencon
 
@@ -14,9 +14,9 @@ services:
     image: ${DOCKER_IMAGE_PUSH_NOTIFICATIONS}:${DOCKER_TAG}
     command: python workers/push_notifications.py # sleep 99999
     env_file: 
-      - ../.env
+      - .env
     ports:
-      - ${SERVER_PORT_PUSH_NOTIFICATIONS}:8080
+      - "${SERVER_PORT_PUSH_NOTIFICATIONS}:8080"
     volumes:
       - opencon-logs:/var/log/opencon
 
@@ -24,9 +24,9 @@ services:
     image: ${DOCKER_IMAGE_TELEGRAM}:${DOCKER_TAG}
     command: python workers/telegram.py # sleep 99999
     env_file: 
-      - ../.env
+      - .env
     ports:
-      - ${SERVER_PORT_TELEGRAM}:8080
+      - "${SERVER_PORT_TELEGRAM}:8080"
     volumes:
       - opencon-logs:/var/log/opencon
   
