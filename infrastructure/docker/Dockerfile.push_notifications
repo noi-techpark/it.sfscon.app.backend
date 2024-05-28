@@ -2,6 +2,8 @@ FROM python:3.11.5
 
 ENV PYTHONUNBUFFERED 1
 
+COPY src app
+
 WORKDIR /app
 
 RUN apt update

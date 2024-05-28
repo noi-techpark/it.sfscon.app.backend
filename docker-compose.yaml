@@ -16,9 +16,9 @@ services:
     - redis
     env_file:
     - .env
-    volumes:
-    - ./src/:/app
-    - /var/log/opencon:/var/log/opencon
+    #    volumes:
+    #    - ./src/:/app
+    #    - /var/log/opencon:/var/log/opencon
     ports:
     - 8000:8000
     extra_hosts:
@@ -35,9 +35,9 @@ services:
     - conferences
     env_file:
     - .env
-    volumes:
-    - ./src/:/app
-    - /var/log/opencon:/var/log/opencon
+    #    volumes:
+    #    - ./src/:/app
+    #    - /var/log/opencon:/var/log/opencon
     extra_hosts:
       - "host.docker.internal:host-gateway"
   
@@ -52,9 +52,9 @@ services:
     - conferences
     env_file:
     - .env
-    volumes:
-    - ./src/:/app
-    - /var/log/opencon:/var/log/opencon
+    #    volumes:
+    #    - ./src/:/app
+    #    - /var/log/opencon:/var/log/opencon
 
   postgres:
     image: "postgres:14-alpine"
