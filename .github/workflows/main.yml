@@ -17,7 +17,9 @@ jobs:
     if: github.ref == 'refs/heads/main'
     concurrency: deploy-test
     env:
-      SERVER_PORT: 1005
+      SERVER_PORT_CONFERENCES: 1005
+      SERVER_PORT_PUSH_NOTIFICATIONS: 1006
+      SERVER_PORT_TELEGRAM: 1007
       DOCKER_TAG: ${{ github.sha }}-test
     steps:
       - name: Checkout source code
@@ -28,7 +30,10 @@ jobs:
         with:
           working-directory: ${{ env.WORKING_DIRECTORY }}
         env:
-          X_SERVER_PORT: ${{ env.SERVER_PORT }}
+          X_SERVER_PORT_CONFERENCES: ${{ env.SERVER_PORT_CONFERENCES }}
+          X_SERVER_PORT_PUSH_NOTIFICATIONS: ${{ env.SERVER_PORT_PUSH_NOTIFICATIONS }}
+          X_SERVER_PORT_TELEGRAM: ${{ env.SERVER_PORT_TELEGRAM }}
+          
           X_DOCKER_IMAGE_CONFERENCES: ${{ env.DOCKER_IMAGE_CONFERENCES }}
           X_DOCKER_IMAGE_PUSH_NOTIFICATIONS: ${{ env.DOCKER_IMAGE_PUSH_NOTIFICATIONS }}
           X_DOCKER_IMAGE_TELEGRAM: ${{ env.DOCKER_IMAGE_TELEGRAM }}
@@ -57,7 +62,9 @@ jobs:
 #    # needs: test
 #    concurrency: deploy-prod
 #    env:
-#      SERVER_PORT: 1006
+#      SERVER_PORT_CONFERENCES: 1005
+#      SERVER_PORT_PUSH_NOTIFICATIONS: 1006
+#      SERVER_PORT_TELEGRAM: 1007
 #      DOCKER_TAG: ${{ github.sha }}
 #    steps:
 #      - name: Checkout source code
@@ -68,7 +75,9 @@ jobs:
 #        with:
 #          working-directory: ${{ env.WORKING_DIRECTORY }}
 #        env:
-#          X_SERVER_PORT: ${{ env.SERVER_PORT }}
+#          X_SERVER_PORT_CONFERENCE: ${{ env.SERVER_PORT_CONFERENCE }}
+#          X_SERVER_PORT_PUSH_NOTIFICATIONS: ${{ env.SERVER_PORT_PUSH_NOTIFICATIONS }}
+#          X_SERVER_PORT_TELEGRAM: ${{ env.SERVER_PORT_TELEGRAM }}
 #          X_DOCKER_IMAGE_CONFERENCES: ${{ env.DOCKER_IMAGE_CONFERENCES }}
 #          X_DOCKER_IMAGE_PUSH_NOTIFICATIONS: ${{ env.DOCKER_IMAGE_PUSH_NOTIFICATIONS }}
 #          X_DOCKER_IMAGE_TELEGRAM: ${{ env.DOCKER_IMAGE_TELEGRAM }}
