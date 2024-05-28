@@ -7,7 +7,7 @@ on:
 env:
   PROJECT_NAME: sfscon-backend
   DOCKER_IMAGE_CONFERENCES: ghcr.io/${{ github.repository }}/sfscon-conferences
-  DOCKER_IMAGE_PUSH_NOTIFICATION: ghcr.io/${{ github.repository }}/sfscon-push-notifications
+  DOCKER_IMAGE_PUSH_NOTIFICATIONS: ghcr.io/${{ github.repository }}/sfscon-push-notifications
   DOCKER_IMAGE_TELEGRAM: ghcr.io/${{ github.repository }}/sfscon-telegram
   
 
@@ -30,7 +30,7 @@ jobs:
         env:
           X_SERVER_PORT: ${{ env.SERVER_PORT }}
           X_DOCKER_IMAGE_CONFERENCES: ${{ env.DOCKER_IMAGE_CONFERENCES }}
-          X_DOCKER_IMAGE_PUSH_NOTIFICATION: ${{ env.DDOCKER_IMAGE_PUSH_NOTIFICATION }}
+          X_DOCKER_IMAGE_PUSH_NOTIFICATIONS: ${{ env.DOCKER_IMAGE_PUSH_NOTIFICATIONS }}
           X_DOCKER_IMAGE_TELEGRAM: ${{ env.DOCKER_IMAGE_TELEGRAM }}
           X_DOCKER_TAG: ${{ env.DOCKER_TAG }}
 
@@ -70,7 +70,7 @@ jobs:
 #        env:
 #          X_SERVER_PORT: ${{ env.SERVER_PORT }}
 #          X_DOCKER_IMAGE_CONFERENCES: ${{ env.DOCKER_IMAGE_CONFERENCES }}
-#          X_DOCKER_IMAGE_PUSH_NOTIFICATION: ${{ env.DDOCKER_IMAGE_PUSH_NOTIFICATION }}
+#          X_DOCKER_IMAGE_PUSH_NOTIFICATIONS: ${{ env.DOCKER_IMAGE_PUSH_NOTIFICATIONS }}
 #          X_DOCKER_IMAGE_TELEGRAM: ${{ env.DOCKER_IMAGE_TELEGRAM }}
 #          X_DOCKER_TAG: ${{ env.DOCKER_TAG }}
 #
