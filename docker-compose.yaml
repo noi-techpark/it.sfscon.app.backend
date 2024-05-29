@@ -1,12 +1,4 @@
 services:
-
-  redis:
-    command: redis-server
-    hostname: redis
-    image: redis:alpine
-    labels:
-      NAME: redis
-
   conferences:
     build:
       context: .
@@ -14,11 +6,16 @@ services:
     command: uvicorn main:app --host 0.0.0.0 --reload # sleep 9999999999
     env_file:
     - .env
-    #    volumes:
-    #    - ./src/:/app
-    #    - /var/log/opencon:/var/log/opencon
+    volumes:
+      - opencon-logs:/var/log/opencon
     ports:
     - 8000:8000
+    healthcheck:
+      test: curl --fail http://localhost:8000/openapi.json || exit 1
+      interval: 5s
+      retries: 3
+      start_period: 5s
+      timeout: 5s
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -26,21 +23,23 @@ services:
         condition: service_started
       postgres:
         condition: service_started
-
   
   push_notifications:
     build:
       context: .
       dockerfile: infrastructure/docker/Dockerfile
-    
-    command: python workers/push_notifications.py # sleep 99999
+    command: python workers/push_notifications.py
     env_file:
     - .env
+    volumes:
+      - opencon-logs:/var/log/opencon
     depends_on:
       redis:
         condition: service_started
       postgres:
         condition: service_started
+      conferences:
+        condition: service_healthy
 
   postgres:
     image: "postgres:14-alpine"
@@ -50,4 +49,16 @@ services:
       POSTGRES_PASSWORD: sfscon
     hostname: postgres
     volumes:
-      - /tmp/epaper_pgdata:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
+
+  redis:
+    command: redis-server
+    hostname: redis
+    image: redis:alpine
+    labels:
+      NAME: redis
+
+
+volumes:
+  opencon-logs:
+  postgres-data:

@@ -8,7 +8,13 @@ services:
     ports:
       - "${SERVER_PORT_CONFERENCES}:8000"
     volumes:
-      - opencon-logs
+      - opencon-logs:/var/log/opencon
+    healthcheck:
+      test: curl --fail http://localhost:8000/openapi.json || exit 1
+      interval: 300s
+      retries: 3
+      start_period: 5s
+      timeout: 60s
     depends_on:
       redis:
         condition: service_started
@@ -17,18 +23,20 @@ services:
 
   push_notifications:
     image: ${DOCKER_IMAGE}:${DOCKER_TAG}
-    command: mkdir -p python workers/push_notifications.py # sleep 99999
+    command: mkdir -p python workers/push_notifications.py sleep 20
     env_file: 
       - .env
     ports:
       - "${SERVER_PORT_PUSH_NOTIFICATIONS}:8080"
     volumes:
-      - opencon-logs
+      - opencon-logs:/var/log/opencon
     depends_on:
       redis:
         condition: service_started
       postgres:
         condition: service_started
+      conferences:
+        condition: service_healthy
 
   postgres:
     image: "postgres:14-alpine"
@@ -38,7 +46,7 @@ services:
       POSTGRES_PASSWORD: sfscon
     hostname: postgres
     volumes:
-      - postgres-data
+      - postgres-data:/var/lib/postgresql/data
   
   redis:
     command: redis-server
