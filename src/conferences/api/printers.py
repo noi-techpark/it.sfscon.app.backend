@@ -141,11 +141,8 @@ async def register_printer_and_retrieve_credentials(id_lane, request: Request):
                    'checklist_id': os.getenv('PRETIX_CHECKLIST_ID'),
                    'event_id': os.getenv('PRETIX_EVENT_ID'),
                    'organizer_id': os.getenv('PRETIX_ORGANIZER_ID'),
-                   },
-        'telegram': {
-            'bot_token': os.getenv('TELEGRAM_BOT_TOKEN'),
-            'chat_id': os.getenv('TELEGRAM_CHAT_ID'),
-        }}
+                   }
+        }
 
 
 @app.post('/api/printers/timeout/{id_lane}')

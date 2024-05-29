@@ -16,7 +16,6 @@ jobs:
     env:
       SERVER_PORT_CONFERENCES: 1005
       SERVER_PORT_PUSH_NOTIFICATIONS: 1006
-      SERVER_PORT_TELEGRAM: 1007
       DOCKER_TAG: ${{ github.sha }}-test
       DOCKER_IMAGE: ghcr.io/${{ github.repository }}/sfscon-backend-test
     steps:
@@ -30,7 +29,6 @@ jobs:
         env:
           X_SERVER_PORT_CONFERENCES: ${{ env.SERVER_PORT_CONFERENCES }}
           X_SERVER_PORT_PUSH_NOTIFICATIONS: ${{ env.SERVER_PORT_PUSH_NOTIFICATIONS }}
-          X_SERVER_PORT_TELEGRAM: ${{ env.SERVER_PORT_TELEGRAM }}
           
           X_DOCKER_IMAGE: ${{ env.DOCKER_IMAGE}}
           X_DOCKER_TAG: ${{ env.DOCKER_TAG }}
@@ -61,7 +59,6 @@ jobs:
 #      DOCKER_IMAGE: ghcr.io/${{ github.repository }}/sfscon-backend
 #      SERVER_PORT_CONFERENCES: 1005
 #      SERVER_PORT_PUSH_NOTIFICATIONS: 1006
-#      SERVER_PORT_TELEGRAM: 1007
 #      DOCKER_TAG: ${{ github.sha }}
 #    steps:
 #      - name: Checkout source code
@@ -74,7 +71,6 @@ jobs:
 #        env:
 #          X_SERVER_PORT_CONFERENCE: ${{ env.SERVER_PORT_CONFERENCE }}
 #          X_SERVER_PORT_PUSH_NOTIFICATIONS: ${{ env.SERVER_PORT_PUSH_NOTIFICATIONS }}
-#          X_SERVER_PORT_TELEGRAM: ${{ env.SERVER_PORT_TELEGRAM }}
 #          X_DOCKER_IMAGE: ${{ env.DOCKER_IMAGE}}
 #          X_DOCKER_TAG: ${{ env.DOCKER_TAG }}
 #

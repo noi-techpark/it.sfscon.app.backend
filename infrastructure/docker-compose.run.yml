@@ -20,16 +20,6 @@ services:
     volumes:
       - opencon-logs:/var/log/opencon
 
-  telegram:
-    image: ${DOCKER_IMAGE}:${DOCKER_TAG}
-    command: python workers/telegram.py # sleep 99999
-    env_file: 
-      - .env
-    ports:
-      - "${SERVER_PORT_TELEGRAM}:8080"
-    volumes:
-      - opencon-logs:/var/log/opencon
-  
   postgres:
     image: "postgres:14-alpine"
     environment:
