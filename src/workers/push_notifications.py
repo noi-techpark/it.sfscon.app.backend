@@ -19,7 +19,7 @@ def setup_logger(logger_name):
     logger.setLevel(logging.DEBUG)  # Set the log level
 
     # Create handlers
-    f_handler = logging.FileHandler(f'/var/log/opencon/{logger_name}.log')
+    f_handler = logging.FileHandler(f'{logger_name}.log')
     f_handler.setLevel(logging.DEBUG)  # Set the log level for the file handler
 
     c_handler = logging.StreamHandler()

@@ -12,8 +12,6 @@ services:
       context: .
       dockerfile: infrastructure/docker/Dockerfile
     command: uvicorn main:app --host 0.0.0.0 --reload # sleep 9999999999
-    depends_on:
-    - redis
     env_file:
     - .env
     #    volumes:
@@ -23,6 +21,12 @@ services:
     - 8000:8000
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_started
+
   
   push_notifications:
     build:
@@ -30,14 +34,13 @@ services:
       dockerfile: infrastructure/docker/Dockerfile
     
     command: python workers/push_notifications.py # sleep 99999
-    depends_on:
-    - redis
-    - conferences
     env_file:
     - .env
-    #    volumes:
-    #    - ./src/:/app
-    #    - /var/log/opencon:/var/log/opencon
+    depends_on:
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_started
 
   postgres:
     image: "postgres:14-alpine"
