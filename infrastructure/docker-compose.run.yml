@@ -23,7 +23,7 @@ services:
 
   push_notifications:
     image: ${DOCKER_IMAGE}:${DOCKER_TAG}
-    command: mkdir -p python workers/push_notifications.py sleep 10
+    command: python workers/push_notifications.py sleep 10
     env_file: 
       - .env
     ports:
