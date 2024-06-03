@@ -36,7 +36,7 @@ jobs:
           X_DB_PORT: 5432
 
           X_JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY}}
-          X_DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          X_DB_USER: ${{ secrets.DB_USER }}
           X_DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           X_DB_NAME: ${{ secrets.DB_NAME }}
           X_ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
