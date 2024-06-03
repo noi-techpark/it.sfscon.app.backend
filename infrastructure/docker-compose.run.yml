@@ -41,9 +41,9 @@ services:
   postgres:
     image: "postgres:14-alpine"
     environment:
-      POSTGRES_DB: ${ DB_NAME:sfscon }
-      POSTGRES_USER: ${ DB_USER:sfscon }
-      POSTGRES_PASSWORD: ${ DB_PASSWORD:sfscon }
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     hostname: postgres
     volumes:
       - postgres-data:/var/lib/postgresql/data
