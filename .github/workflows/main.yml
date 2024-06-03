@@ -32,7 +32,7 @@ jobs:
           X_DOCKER_IMAGE: ${{ env.DOCKER_IMAGE}}
           X_DOCKER_TAG: ${{ env.DOCKER_TAG }}
 
-          X_DB_HOST: localhost
+          X_DB_HOST: postgres
           X_DB_PORT: 5432
 
           X_JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY}}
