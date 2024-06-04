@@ -43,7 +43,7 @@ jobs:
           X_ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
           X_PRETIX_TOKEN: ${{ secrets.PRETIX_TOKEN }}
           X_PRETIX_CHECKLIST_ID: 313919
-          X_PRETIX_EVENT_ID: _sfscon23
+          X_PRETIX_EVENT_ID: sfscon23
           X_PRETIX_ORGANIZER_ID: noi-digital
 
           X_XML_URL: "https://www.sfscon.it/?calendar=2023&format=xml"

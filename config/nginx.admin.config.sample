@@ -5,7 +5,7 @@ upstream oneservices_v2 { ip_hash; server 127.0.0.1:8000 max_fails=3  fail_timeo
 server {
         root /home/digital/app/frontend;
 
-        server_name admin.stage.opencon.dev m.opencon.dev admin.opencon.dev app.sfscon.it;
+        server_name webadmin.app.sfscon.testingmachine.eu app.sfscon.it;
         
         client_max_body_size 20M;
 
