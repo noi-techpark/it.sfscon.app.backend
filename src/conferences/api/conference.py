@@ -13,6 +13,7 @@ from fastapi import HTTPException
 
 from app import get_app
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 import conferences.controller as controller
 
 app = get_app()
