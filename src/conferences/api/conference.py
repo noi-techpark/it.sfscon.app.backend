@@ -18,6 +18,16 @@ import conferences.controller as controller
 app = get_app()
 
 
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get('/api/conferences', )
 async def get_conferences():
     return await controller.get_all_conferences()
