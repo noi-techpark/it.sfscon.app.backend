@@ -45,6 +45,9 @@ jobs:
           X_PRETIX_CHECKLIST_ID: 313919
           X_PRETIX_EVENT_ID: sfscon23
           X_PRETIX_ORGANIZER_ID: noi-digital
+          
+          X_LANE_USERNAME_PREFIX: ${{ secrets.ADMIN_USERNAME }}
+
 
           X_XML_URL: "https://www.sfscon.it/?calendar=2023&format=xml"
           X_REDIS_SERVER: redis
@@ -66,61 +69,3 @@ jobs:
           docker-username: "noi-techpark-bot"
           docker-password: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
           project-name: ${{ env.PROJECT_NAME }}
-#  deploy-prod:
-#    runs-on: ubuntu-22.04
-#    if: github.ref == 'refs/heads/prod'
-#    # needs: test
-#    concurrency: deploy-prod
-#    env:
-#      DOCKER_IMAGE: ghcr.io/${{ github.repository }}/sfscon-backend
-#      SERVER_PORT_CONFERENCES: 1005
-#      SERVER_PORT_PUSH_NOTIFICATIONS: 1006
-#      DOCKER_TAG: ${{ github.sha }}
-#    steps:
-#      - name: Checkout source code
-#        uses: actions/checkout@v4
-#
-#      - name: Create .env file
-#        uses: noi-techpark/github-actions/env-file@v2
-#        with:
-#          working-directory: ${{ env.WORKING_DIRECTORY }}
-#        env:
-#          X_SERVER_PORT_CONFERENCE: ${{ env.SERVER_PORT_CONFERENCE }}
-#          X_SERVER_PORT_PUSH_NOTIFICATIONS: ${{ env.SERVER_PORT_PUSH_NOTIFICATIONS }}
-#          X_DOCKER_IMAGE: ${{ env.DOCKER_IMAGE}}
-#          X_DOCKER_TAG: ${{ env.DOCKER_TAG }}
-#
-#          X_JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY}}
-#          X_DB_USERNAME: ${{ secrets.DB_USERNAME }}
-#          X_DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-#          X_DB_NAME: ${{ secrets.DB_NAME }}
-#          X_ADMIN_USERNAME: ${{ secrets.ADMIN_USERNAME }}
-#          X_ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
-#          X_PRETIX_TOKEN: ${{ secrets.PRETIX_TOKEN }}
-#          X_PRETIX_CHECKLIST_ID: __PLACE_CHECKLIST_ID__
-#          X_PRETIX_EVENT_ID: __PLACE_EVENT_ID__
-#          X_PRETIX_ORGANIZER_ID: noi-__PLACE_ORGANIZER_ID__
-#
-#          X_XML_URL: "https://www.sfscon.it/?calendar=2023&format=xml"
-#          X_REDIS_SERVER: localhost
-#          X_PRINTER_X_API_KEY: __UUID__
-#          X_CHECKIN_LANES: '{"LANE1":"__PLACE_YOUR_LANE1_UUID__","LANE2":"__PLACE_YOUR_LANE2_UUID__","LANE3":"__PLACE_YOUR_LANE3_UUID__","LANE4":"__PLACE_YOUR_LANE4_UUID__"}'
-#          X_LANE_USERNAME_PREFIX: LANE
-#          X_LANE2PORT: '{"LANE1":"__PORT__","LANE2":"__PORT__","LANE3":"__PORT__"}'
-#
-#      - name: Build and push images
-#        uses: noi-techpark/github-actions/docker-build-and-push@v2
-#        with:
-#          working-directory: infrastructure
-#          docker-username: ${{ github.actor }}
-#          docker-password: ${{ secrets.GITHUB_TOKEN }}
-#
-#      - name: Deploy application
-#        uses: noi-techpark/github-actions/docker-deploy@v2
-#        with:
-#          working-directory: infrastructure/ansible
-#          hosts: "test"
-#          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-#          docker-username: "noi-techpark-bot"
-#          docker-password: ${{ secrets.GH_PERSONAL_ACCESS_TOKEN }}
-#          project-name: ${{ env.PROJECT_NAME }}
