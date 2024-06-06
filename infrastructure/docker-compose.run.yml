@@ -11,10 +11,9 @@ services:
       - opencon-logs:/var/log/opencon
     healthcheck:
       test: curl --fail http://localhost:8000/api/conferences/health || exit 1
-      interval: 60s
+      interval: 30s
       retries: 3
-      start_period: 5s
-      timeout: 5s
+      timeout: 10s
     depends_on:
       redis:
         condition: service_started
@@ -23,7 +22,7 @@ services:
 
   push_notifications:
     image: ${DOCKER_IMAGE}:${DOCKER_TAG}
-    command: python workers/push_notifications.py sleep 10
+    command: python workers/push_notifications.py
     env_file: 
       - .env
     ports:
