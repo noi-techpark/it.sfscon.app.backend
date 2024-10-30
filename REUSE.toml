@@ -4,7 +4,7 @@ SPDX-PackageSupplier = "DigitalCUBE <info@digitalcube.rs>"
 SPDX-PackageDownloadLocation = "https://m.opencon.dev/"
 
 [[annotations]]
-path = [".env.docker.example", "start.sh", "src/tests/**", "src/shared/**", "config/**", "REUSE.toml", "static/**", ".gitignore", "**.sample", ".env.sample", "docker-compose.yaml", "src/**.yaml", "src/**.xml", "src/docker/**", "README.md", "requirements.txt", "src/pyproject.toml", "src/tests/assets/fake_attendees.json", "src/tests/pytest.ini", "src/migrations/models/**"]
+path = ["src/scripts/update-conf.py", "aws.credentials.example",".env.docker.example", "start.sh", "src/tests/**", "src/shared/**", "config/**", "REUSE.toml", "static/**", ".gitignore", "**.sample", ".env.sample", "docker-compose.yaml", "src/**.yaml", "src/**.xml", "src/docker/**", "README.md", "requirements.txt", "src/pyproject.toml", "src/tests/assets/fake_attendees.json", "src/tests/pytest.ini", "src/migrations/models/**"]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2023 DigitalCUBE <info@digitalcube.rs>"
 SPDX-License-Identifier = "GPL-3.0-or-later"
