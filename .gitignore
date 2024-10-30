@@ -1,0 +1,13 @@
+aliases.sh
+.mypy_cache
+.env
+.env.docker
+*.pyc
+.venv
+.idea
+*~
+__pycache__
+.pytest_cache
+TODO.txt
+restore/
+aws.credentials

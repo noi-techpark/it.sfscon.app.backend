@@ -1,0 +1,72 @@
+services:
+
+  webserver:
+    image: nginx
+
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.webserver
+
+    depends_on:
+      - conferences
+      - push_notifications
+
+    ports:
+      - 8080:80
+
+
+  conferences:
+
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+
+    env_file:
+      - .env
+      - .env.docker
+
+    volumes:
+      - opencon-logs:/var/log/opencon
+
+#      - ./src/scripts/update-conf.py:/scripts/update-conf.py 
+
+    healthcheck:
+      test: curl --fail http://localhost:8000/openapi.json || exit 1
+      interval: 5s
+      retries: 3
+      start_period: 5s
+      timeout: 5s
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    depends_on:
+      redis:
+        condition: service_started
+  
+  push_notifications:
+
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile
+    command: python workers/push_notifications.py
+    env_file:
+      - .env
+    volumes:
+      - ./src/workers:/workers
+      - opencon-logs:/var/log/opencon
+
+    depends_on:
+      redis:
+        condition: service_started
+
+  redis:
+    command: redis-server
+    hostname: redis
+    image: redis:alpine
+    labels:
+      NAME: redis
+
+
+volumes:
+  opencon-logs: 
