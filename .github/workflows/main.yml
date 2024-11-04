@@ -60,8 +60,8 @@ jobs:
           AWS_ACCESS_KEY_TEST: ${{ secrets.AWS_ACCESS_KEY_TEST }}
         run: |
           cp aws.credentials.example .aws.credentials
-          sed -i -e "s/KEY_ID/$AWS_KEY_ID_TEST/" .aws.credentials
-          sed -i -e "s/ACCESS_KEY/$AWS_ACCESS_KEY_TEST/" .aws.credentials
+          sed -i -e 's/KEY_ID/"$AWS_KEY_ID_TEST"/' .aws.credentials
+          sed -i -e 's/ACCESS_KEY/"$AWS_ACCESS_KEY_TEST"/' .aws.credentials
  
       - name: Build and push images
         uses: noi-techpark/github-actions/docker-build-and-push@v2
