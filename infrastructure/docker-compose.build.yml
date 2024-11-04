@@ -1,7 +1,11 @@
 services:
-  
   app:
     image: ${DOCKER_IMAGE}:${DOCKER_TAG}
     build:
       context: ../
       dockerfile: infrastructure/docker/Dockerfile
+  webserver:
+    image: ${DOCKER_IMAGE_WEBSERVER}:${DOCKER_TAG}
+    build:
+      context: ../
+      dockerfile: infrastructure/docker/Dockerfile.webserver

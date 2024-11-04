@@ -2,18 +2,7 @@ FROM node:latest AS build
 
 WORKDIR /app
 
-
-# TODO: REMOVE THIS
-
-RUN git clone https://github.com/digital-cube/sfscon2024-admin.git
-
-
-
-# TODO: UNCOMMENT THIS
-# RUN git clone https://github.com/noi-techpark/it.sfscon.app.webadmin.git sfscon2024-admin
-
-
-
+RUN git clone https://github.com/noi-techpark/it.sfscon.app.webadmin.git sfscon2024-admin
 
 WORKDIR /app/sfscon2024-admin
 

@@ -9,7 +9,7 @@ env:
 
 jobs:
   deploy-test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/main'
     concurrency: deploy-test
     env:
@@ -17,6 +17,7 @@ jobs:
       SERVER_PORT_PUSH_NOTIFICATIONS: 1006
       DOCKER_TAG: ${{ github.sha }}-test
       DOCKER_IMAGE: ghcr.io/${{ github.repository }}/sfscon-backend-test
+      DOCKER_IMAGE_WEBSERVER: ghcr.io/${{ github.repository }}/sfscon-backend-webserver-test
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
@@ -30,6 +31,7 @@ jobs:
           X_SERVER_PORT_PUSH_NOTIFICATIONS: ${{ env.SERVER_PORT_PUSH_NOTIFICATIONS }}
 
           X_DOCKER_IMAGE: ${{ env.DOCKER_IMAGE}}
+          X_DOCKER_IMAGE_WEBSERVER: ${{ env.DOCKER_IMAGE_WEBSERVER }}
           X_DOCKER_TAG: ${{ env.DOCKER_TAG }}
           X_COMPOSE_PROJECT_NAME: ${{ env.PROJECT_NAME }}
 
@@ -49,11 +51,18 @@ jobs:
           
           X_LANE_USERNAME_PREFIX: ${{ secrets.ADMIN_USERNAME }}
 
-
           X_XML_URL: "https://www.sfscon.it/?calendar=2023&format=xml"
           X_REDIS_SERVER: redis
 
-
+      - name: Create .aws.credentials file and inject values
+        env:
+          AWS_KEY_ID_TEST: ${{ secrets.AWS_KEY_ID_TEST }}
+          AWS_ACCESS_KEY_TEST: ${{ secrets.AWS_ACCESS_KEY_TEST }}
+        run: |
+          cp aws.credentials.example .aws.credentials
+          sed -i "s/KEY_ID/$AWS_KEY_ID_TEST/" .aws.credentials
+          sed -i "s/ACCESS_KEY/$AWS_ACCESS_KEY_TEST/" .aws.credentials
+ 
       - name: Build and push images
         uses: noi-techpark/github-actions/docker-build-and-push@v2
         with:
