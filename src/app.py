@@ -1,16 +1,15 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2023 Digital CUBE <https://digitalcube.rs>
 
-import os
 import logging
+import os
 import uuid
+from contextlib import asynccontextmanager
 
 import psycopg2
-from fastapi import FastAPI
-from fastapi import Depends
-from tortoise import Tortoise
 from dotenv import load_dotenv
-from contextlib import asynccontextmanager
+from fastapi import Depends, FastAPI
+from tortoise import Tortoise
 
 load_dotenv()
 

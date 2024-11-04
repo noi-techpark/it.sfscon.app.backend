@@ -1,16 +1,17 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2023 Digital CUBE <https://digitalcube.rs>
 
-import os
-import pytest
-import dotenv
-import logging
-import psycopg2
 import importlib
-from tortoise import Tortoise
+import logging
+import os
 from abc import ABC, abstractmethod
 
-from app import startup_event, shutdown_event, get_app
+import dotenv
+import psycopg2
+import pytest
+from tortoise import Tortoise
+
+from app import get_app, shutdown_event, startup_event
 
 logging.disable(logging.CRITICAL)
 dotenv.load_dotenv()

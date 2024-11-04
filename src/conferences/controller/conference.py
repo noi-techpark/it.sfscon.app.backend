@@ -1,28 +1,40 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2023 Digital CUBE <https://digitalcube.rs>
-
-import os
 import csv
-import yaml
-import uuid
-import json
-import httpx
-import random
-import slugify
-import logging
 import datetime
-import xmltodict
+import io
+import json
+import logging
+import os
+import random
+import re
+import uuid
+from typing import Optional
+
+import httpx
+import pydantic
+import redis
+import slugify
 import tortoise.timezone
-
+import xmltodict
+import yaml
 from fastapi import HTTPException, status
+from fastapi.responses import StreamingResponse
 
-import shared.ex as ex
 import conferences.models as models
+import shared.ex as ex
 
 log = logging.getLogger('conference_logger')
 current_file_dir = os.path.dirname(os.path.abspath(__file__))
 
 rlog = logging.getLogger('redis_logger')
+from tortoise.functions import Avg, Count
+
+
+class ConferenceImportRequestResponse(pydantic.BaseModel):
+    id: str
+    created: bool
+    changes: dict
 
 
 async def db_add_conference(name, acronym, source_uri):
@@ -95,7 +107,8 @@ async def db_add_or_update_tracks(conference, content_tracks):
     if 'SFSCON' not in tracks_by_name:
         db_track = await models.Track.filter(conference=conference, name='SFSCON').get_or_none()
         if not db_track:
-            db_track = await models.Track.create(**{'conference': conference, 'order': -1, 'name': f'SFSCON', 'slug': f'sfscon', 'color': 'black'})
+            db_track = await models.Track.create(
+                **{'conference': conference, 'order': -1, 'name': f'SFSCON', 'slug': f'sfscon', 'color': 'black'})
 
         tracks_by_name['SFSCON'] = db_track
 
@@ -107,7 +120,49 @@ async def convert_xml_to_dict(xml_text):
     return content['schedule']
 
 
-async def fetch_xml_content():
+def remove_html(text):
+    # return text
+
+    if not text:
+        return None
+
+    for t in ('<br>', '<br/>', '<br />', '<p>', '</p>'):
+        text = text.replace(t, '\n')
+
+    for t in ('<b>', '<B>'):
+        if t in text:
+            text = text.replace(t, '|Text style={styles.bold}|')
+
+    for t in ('<em>', '<EM>'):
+        if t in text:
+            text = text.replace(t, '|Text style={styles.italic}|')
+
+    for t in ('</b>', '</B>', '</em>', '</EM>'):
+        if t in text:
+            text = text.replace(t, '|/Text|')
+
+    # Define a regular expression pattern to match HTML tags
+    pattern = re.compile('<.*?>')
+
+    # Use the pattern to remove all HTML tags
+    clean_text = re.sub(pattern, '', text)
+
+    clean_text = clean_text.replace('|Text style={styles.bold}|', '<Text style={styles.bold}>')
+    clean_text = clean_text.replace('|Text style={styles.italic}|', '<Text style={styles.italic}>')
+    clean_text = clean_text.replace('|/Text|', '</Text>')
+    # Remove any extra whitespace
+    clean_text = ' '.join(clean_text.split())
+
+    return clean_text
+
+
+async def fetch_xml_content(use_local_xml=False, local_xml_fname='sfscon2024.xml'):
+    if use_local_xml:
+        current_file_folder = os.path.dirname(os.path.realpath(__file__))
+        if use_local_xml:
+            with open(current_file_folder + f'/../../tests/assets/{local_xml_fname}', 'r') as f:
+                return await convert_xml_to_dict(f.read())
+
     XML_URL = os.getenv("XML_URL", None)
 
     if not XML_URL:
@@ -124,7 +179,11 @@ async def fetch_xml_content():
             with open('/tmp/last_saved_xml.xml', 'wt') as f:
                 f.write(res.text)
 
-            return await convert_xml_to_dict(res.text)
+            dict_content = await convert_xml_to_dict(res.text)
+            with open('/tmp/last_saved_json.json', 'wt') as f:
+                f.write(json.dumps(dict_content, ensure_ascii=False, indent=1))
+
+            return dict_content
         except Exception as e:
             log.critical(f'Error fetching XML from {XML_URL} :: {str(e)}')
             raise
@@ -138,15 +197,27 @@ async def add_sessions(conference, content, tracks_by_name):
     await models.ConferenceLecturer.filter(conference=conference).delete()
 
     def get_or_raise(key, obj):
-        if key not in obj:
-            raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
-                                detail=f"{key.upper()}_NOT_FOUND")
+
+        if key == '@unique_id' and not '@unique_id' in obj:
+            return None
+
         return obj[key]
+
+        # # TODO: Ubi ovo kad srede unique  - id obrisi od 143-145 linije
+        # if key == '@unique_id':
+        #     # if key not in obj:
+        #     return obj['@id']
+        #
+        # if key not in obj:
+        #     raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
+        #                         detail=f"{key.upper()}_NOT_FOUND")
+        # return obj[key]
 
     # test for duplicated unique_id
 
     events_by_unique_id = {}
 
+    all_uids = set()
     for day in content['day']:
 
         for room in day['room']:
@@ -157,18 +228,37 @@ async def add_sessions(conference, content, tracks_by_name):
                 if type(event) != dict:
                     continue
                 unique_id = get_or_raise('@unique_id', event)
+                if not unique_id:
+                    continue
+
+                if unique_id in all_uids:
+                    continue
+
+                all_uids.add(unique_id)
+
                 if unique_id == '2023day1event5':
                     ...
                 if unique_id in events_by_unique_id:
-                    raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail=f"EVENT_UNIQUE_ID_ALREADY_EXISTS:{unique_id}")
+                    raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
+                                        detail={"code": f"EVENT_UNIQUE_ID_ALREADY_EXISTS",
+                                                "message": f"Event {unique_id} already exists"})
+
                 events_by_unique_id[unique_id] = unique_id
+
+    all_uids = set()
+
+    current_sessions_by_unique_id = {
+        s.unique_id: s for s in
+        await models.EventSession.filter(conference=conference).all()}
+
+    sessions_in_this_xml_by_unique_id = {}
 
     for day in content['day']:
 
         date = day.get('@date', None)
         if not date:
             raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
-                                detail="DAY_DATE_NOT_VALID")
+                                detail={"code": "DAY_DATE_NOT_VALID", "message": "Day date is not valid"})
 
         room_by_name = {}
 
@@ -178,7 +268,7 @@ async def add_sessions(conference, content, tracks_by_name):
 
             if not room_name:
                 raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
-                                    detail="ROOM_NAME_NOT_VALID")
+                                    detail={"code": "ROOM_NAME_NOT_VALID", "message": "Room name is not valid"})
 
             room_slug = slugify.slugify(room_name)
 
@@ -211,8 +301,20 @@ async def add_sessions(conference, content, tracks_by_name):
                 if type(event) != dict:
                     continue
                 unique_id = get_or_raise('@unique_id', event)
+                if not unique_id:
+                    continue
+
+                if unique_id in all_uids:
+                    continue
+
+                all_uids.add(unique_id)
 
                 title = get_or_raise('title', event)
+                try:
+                    url = get_or_raise('url', event)
+                except Exception as e:
+                    url = None
+
                 slug = slugify.slugify(title)
                 track_name = event.get('track', None)
                 if type(track_name) == dict:
@@ -229,11 +331,13 @@ async def add_sessions(conference, content, tracks_by_name):
                 description = event.get('description', None)
                 abstract = event.get('abstract', None)
 
-                no_bookmark = event.get('@no_bookmark', False)
-                bookmarkable = not no_bookmark
-                rateable = bookmarkable
+                # no_bookmark = event.get('@bookmark', False)
+                can_bookmark = event.get('@bookmark', "0") == "1"
+                can_rate = event.get('@rating', "0") == "1"
 
-                if not bookmarkable:
+                if not can_bookmark:
+                    ...
+                else:
                     ...
 
                 if event_start and len(event_start) == 5:
@@ -274,22 +378,27 @@ async def add_sessions(conference, content, tracks_by_name):
                     if not db_event:
                         db_event = await models.EventSession.create(conference=conference,
                                                                     title=title,
+                                                                    url=url,
                                                                     abstract=abstract,
-                                                                    description=description,
+                                                                    description=remove_html(description),
                                                                     unique_id=unique_id,
-                                                                    bookmarkable=bookmarkable,
-                                                                    rateable=rateable,
+                                                                    bookmarkable=can_bookmark,
+                                                                    rateable=can_rate,
                                                                     track=track,
                                                                     room=db_room,
                                                                     str_start_time=str_start_time,
                                                                     start_date=event_start,
-                                                                    end_date=event_start + datetime.timedelta(seconds=event_duration) if event_start and event_duration else None,
+                                                                    duration=event_duration,
+                                                                    end_date=event_start + datetime.timedelta(
+                                                                        seconds=event_duration) if event_start and event_duration else None,
                                                                     )
 
-                        await models.StarredSession.create(event_session=db_event,
-                                                           nr_votes=0,
-                                                           total_stars=0,
-                                                           avg_stars=0)
+                        sessions_in_this_xml_by_unique_id[unique_id] = db_event
+
+                        # await models.StarredSession.create(event_session=db_event,
+                        #                                    nr_votes=0,
+                        #                                    total_stars=0,
+                        #                                    avg_stars=0)
                     else:
 
                         event_start = tortoise.timezone.make_aware(event_start)
@@ -300,15 +409,19 @@ async def add_sessions(conference, content, tracks_by_name):
                         await db_event.update_from_dict({'title': title, 'abstract': abstract,
                                                          'description': description,
                                                          'unique_id': unique_id,
-                                                         'bookmarkable': bookmarkable,
-                                                         'rateable': rateable,
+                                                         'bookmarkable': can_bookmark,
+                                                         'rateable': can_rate,
                                                          'track': track,
+                                                         'duration': event_duration,
                                                          'db_room': db_room,
                                                          'str_start_time': str_start_time,
                                                          'start_date': event_start,
-                                                         'end_date': event_start + datetime.timedelta(seconds=event_duration) if event_start and event_duration else None})
+                                                         'end_date': event_start + datetime.timedelta(
+                                                             seconds=event_duration) if event_start and event_duration else None})
 
                         await db_event.save()
+
+                        sessions_in_this_xml_by_unique_id[unique_id] = db_event
 
                 except Exception as e:
                     log.critical(f'Error adding event {title} :: {str(e)}')
@@ -327,7 +440,8 @@ async def add_sessions(conference, content, tracks_by_name):
                     for person in persons:
 
                         try:
-                            db_person = await models.ConferenceLecturer.filter(conference=conference, external_id=person['@id']).get_or_none()
+                            db_person = await models.ConferenceLecturer.filter(conference=conference,
+                                                                               external_id=person['@id']).get_or_none()
                         except Exception as e:
                             log.critical(f'Error adding person {person["#text"]} :: {str(e)}')
                             raise
@@ -349,7 +463,7 @@ async def add_sessions(conference, content, tracks_by_name):
                             try:
                                 db_person = await models.ConferenceLecturer.create(conference=conference,
                                                                                    external_id=pid,
-                                                                                   bio=bio,
+                                                                                   bio=remove_html(bio),
                                                                                    social_networks=social_networks,
                                                                                    first_name=first_name,
                                                                                    last_name=last_name,
@@ -362,7 +476,7 @@ async def add_sessions(conference, content, tracks_by_name):
                                 log.critical(f'Error adding person {person["#text"]} :: {str(e)}')
                                 raise
                         else:
-                            await db_person.update_from_dict({'bio': bio,
+                            await db_person.update_from_dict({'bio': remove_html(bio),
                                                               'social_networks': social_networks,
                                                               'first_name': first_name,
                                                               'last_name': last_name,
@@ -380,10 +494,131 @@ async def add_sessions(conference, content, tracks_by_name):
                         await db_event.fetch_related('lecturers')
                         await db_event.lecturers.add(*event_persons)
 
-    return changes
+    current_uid_keys = set(current_sessions_by_unique_id.keys())
+    event_session_uid_keys = set(sessions_in_this_xml_by_unique_id.keys())
+
+    to_delete = None
+
+    if current_uid_keys and current_uid_keys != event_session_uid_keys:
+        to_delete = current_uid_keys - event_session_uid_keys
+        for ide in to_delete:
+            e = current_sessions_by_unique_id[ide]
+            changes[str(e.id)] = {'old_start_timestamp': e.start_date, 'new_start_timestamp': None}
+
+        # removing will be later, after sending notifications
+
+    return changes, to_delete
 
 
-async def add_conference(content: dict, source_uri: str, force: bool = False):
+async def send_changes_to_bookmakers(changes, group_4_user=True):
+    log.info('-' * 100)
+    log.info("send_changes_to_bookmakers")
+
+    changed_sessions = changes.keys()
+    # all_anonymous_bookmarks = await models.AnonymousBookmark.filter(session_id__in=changed_sessions).all()
+
+    notification2token = {}
+
+    from html import unescape
+    def clean_text(text):
+        # Unescape any HTML entities (like &#8211;)
+        text = unescape(text)
+
+        # Remove special characters (adjust regex pattern as needed)
+        cleaned_text = re.sub(r'[^\w\s.,:;!?-]', '', text)
+
+        return cleaned_text
+
+    from shared.redis_client import RedisClientHandler
+    redis_client = RedisClientHandler.get_redis_client()
+    # with redis.Redis(host=os.getenv('REDIS_SERVER'), port=6379, db=0) as r:
+
+    if True:
+
+        q = models.EventSession.filter(id__in=changed_sessions)
+        for session in await q:
+            print("S1", session.id)
+            log.info(f"S1 {session.id}")
+
+        q = models.EventSession.filter(id__in=changed_sessions,
+                                       anonymous_bookmarks__user__push_notification_token__isnull=False
+                                       ).prefetch_related('anonymous_bookmarks',
+                                                          'room',
+                                                          'anonymous_bookmarks__user'
+                                                          ).distinct()
+
+        s = q.sql()
+
+        log.info("X")
+
+        notify_users = {}
+        for session in await q:
+
+            log.info('-' * 100)
+            log.info(f"Session {session.id}")
+
+            for bookmarks4session in session.anonymous_bookmarks:
+
+                # log.info(f"    bookmarks4session {bookmarks4session}")
+
+                _from = changes[str(session.id)]['old_start_timestamp'].strftime('%m.%d. %H:%M')
+                _to = changes[str(session.id)]['new_start_timestamp'].strftime('%m.%d. %H:%M') if \
+                    changes[str(session.id)]['new_start_timestamp'] else None
+
+                if changes[str(session.id)]['new_start_timestamp'] and changes[str(session.id)][
+                    'old_start_timestamp'].date() == changes[str(session.id)][
+                    'new_start_timestamp'].date():
+                    _from = changes[str(session.id)]['old_start_timestamp'].strftime('%H:%M')
+                    _to = changes[str(session.id)]['new_start_timestamp'].strftime('%H:%M')
+
+                if not _to:
+                    notification = "Session '" + clean_text(session.title) + "' has been cancelled"
+                else:
+                    notification = "Session '" + clean_text(
+                        session.title) + "' has been rescheduled from " + _from + " to " + _to + f' in room {session.room.name}'
+
+                if bookmarks4session.user.push_notification_token not in notification2token:
+                    notification2token[bookmarks4session.user.push_notification_token] = []
+                notification2token[bookmarks4session.user.push_notification_token].append(notification)
+
+                if not group_4_user:
+                    pn_payload = {'id': bookmarks4session.user.push_notification_token,
+                                  'expo_push_notification_token': bookmarks4session.user.push_notification_token,
+                                  'subject': "Event rescheduled",
+                                  'message': notification,
+                                  'data': {
+                                      'command': 'SESSION_START_CHANGED',
+                                      'session_id': str(session.id),
+                                      'value': changes[str(session.id)]['new_start_timestamp'].strftime(
+                                          '%Y-%m-%d %H:%M:%S')
+                                  }
+                                  }
+
+                    log.info(f"SENDING PUSH NOTIFICATION TO {bookmarks4session.user.push_notification_token}")
+                    redis_client.push_message('opencon_push_notification', pn_payload)
+
+                else:
+                    if bookmarks4session.user_id not in notify_users:
+                        notify_users[bookmarks4session.user_id] = {
+                            'token': bookmarks4session.user.push_notification_token, 'sessions': set()}
+                    notify_users[bookmarks4session.user_id]['sessions'].add(bookmarks4session.session_id)
+
+        if group_4_user and notify_users:
+            for id_user in notify_users:
+                pn_payload = {'id': notify_users[id_user]['token'],
+                              'expo_push_notification_token': notify_users[id_user]['token'],
+                              'subject': "Event rescheduled" if len(
+                                  notify_users[id_user]['sessions']) == 1 else "Events rescheduled",
+                              'message': "Some of your bookmarked events have been rescheduled",
+                              'data': {
+                                  'command': 'OPEN_BOOKMARKS',
+                              }
+                              }
+                log.info(f"SENDING PUSH NOTIFICATION TO {notify_users[id_user]['token']}")
+                redis_client.push_message('opencon_push_notification', pn_payload)
+
+
+async def add_conference(content: dict, source_uri: str, force: bool = False, group_notifications_by_user=True):
     conference = await models.Conference.filter(source_uri=source_uri).get_or_none()
 
     created = False
@@ -410,14 +645,20 @@ async def add_conference(content: dict, source_uri: str, force: bool = False):
     content_tracks = content.get('tracks', [])
 
     tracks_by_name = await db_add_or_update_tracks(conference, content_tracks)
-    changes = await add_sessions(conference, content, tracks_by_name)
+    try:
+        changes, to_delete = await add_sessions(conference, content, tracks_by_name)
+    except Exception as e:
+        raise
+
     if created:
         changes = {}
 
     changes_updated = None
     if changes:
-        from conferences.controller import send_changes_to_bookmakers
-        changes_updated = await send_changes_to_bookmakers(conference, changes, test=True)
+        changes_updated = await send_changes_to_bookmakers(changes, group_4_user=group_notifications_by_user)
+
+    if to_delete:
+        await models.EventSession.filter(unique_id__in=to_delete).delete()
 
     return {'conference': conference,
             'created': created,
@@ -431,7 +672,7 @@ async def get_conference_sessions(conference_acronym):
     conference = await models.Conference.filter(acronym=conference_acronym).get_or_none()
     if not conference:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="CONFERENCE_NOT_FOUND")
+                            detail={"code": "CONFERENCE_NOT_FOUND", "message": "conference not found"})
 
     conference = await get_conference(conference.id)
     serialized = await opencon_serialize(conference)
@@ -445,18 +686,19 @@ async def get_conference_sessions(conference_acronym):
         bookmark_per_event[str(bpe.event_session_id)] += 1
 
     rate_per_event = {}
-    for rpe in await models.StarredSession.filter(event_session__conference=conference).prefetch_related('event_session').all():
+    for rpe in await models.StarredSession.filter(event_session__conference=conference).prefetch_related(
+            'event_session').all():
         rate_per_event[str(rpe.event_session_id)] = rpe.total_stars / rpe.nr_votes if rpe.nr_votes else ' '
 
     for day in serialized['conference']['idx']['ordered_sessions_by_days']:
         for id_session in serialized['conference']['idx']['ordered_sessions_by_days'][day]:
             session = serialized['conference']['db']['sessions'][id_session]
 
-
-
             sessions.append({
                 'event': session['title'],
-                'speakers': ', '.join([serialized['conference']['db']['lecturers'][id_lecturer]['display_name'] for id_lecturer in session['id_lecturers']]),
+                'speakers': ', '.join(
+                    [serialized['conference']['db']['lecturers'][id_lecturer]['display_name'] for id_lecturer in
+                     session['id_lecturers']]),
                 'date': session['date'],
                 'bookmarks': bookmark_per_event[str(id_session)] if id_session in bookmark_per_event else 0,
                 'rating': rate_per_event[str(id_session)] if str(id_session) in rate_per_event else ' '
@@ -499,28 +741,362 @@ async def get_pretix_order(conference: models.Conference, id_pretix_order: str):
         raise
 
 
-async def get_conference(id_conference: uuid.UUID):
-    conference = await models.Conference.filter(id=id_conference).prefetch_related('tracks',
-                                                                                   'locations',
-                                                                                   'event_sessions',
-                                                                                   'event_sessions__track',
-                                                                                   'event_sessions__room',
-                                                                                   # 'event_sessions__room__location',
-                                                                                   'event_sessions__lecturers',
-                                                                                   'rooms',
-                                                                                   # 'rooms__location',
-                                                                                   'lecturers',
-                                                                                   'lecturers__event_sessions',
-                                                                                   'event_sessions__starred_session'
-                                                                                   ).get_or_none()
+async def get_dashboard():
+    return {
+        'total_users': 33,
+        'total_bookmarks': 34,
+        'total_ratings': 35,
+    }
+
+
+async def csv_users():
+    conference = await get_current_conference()
+    if not conference:
+        raise HTTPException(status_code=404, detail={"code": "CONFERENCE_NOT_FOUND", "message": "Conference not found"})
+
+    all_users = await models.UserAnonymous.all().prefetch_related('bookmarks', 'bookmarks__session', 'rates')
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Bookmarks', 'Number of ratings', 'Registered'])
+
+    for user in all_users:
+        id = user.id
+        bookmarks = len(user.bookmarks)
+        nr_ratings = len(user.rates)
+        register_at = user.created.strftime('%Y-%m-%d %H:%M:%S')
+
+        writer.writerow([id, bookmarks, nr_ratings, register_at])
+
+    output.seek(0)
+
+    filename = f"sfs2024_anonymous_users_on_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            'Content-Disposition': f'attachment; filename="{filename}"'
+        }
+    )
+
+
+async def get_all_anonymous_users_with_bookmarked_sessions(order_field: Optional[str] = None,
+                                                           order_direction: Optional[models.SortOrder] = None):
+    conference = await get_current_conference()
+    if not conference:
+        raise HTTPException(status_code=404, detail={"code": "CONFERENCE_NOT_FOUND", "message": "Conference not found"})
+
+    all_users = await models.UserAnonymous.all().prefetch_related('bookmarks', 'bookmarks__session', 'rates')
+
+    users_data = [
+        {
+            'id': user.id,
+            'bookmarks': len([b.session.title for b in user.bookmarks]),
+            'nr_ratings': len(user.rates),
+            'register_at': str(user.created)
+        }
+        for user in all_users
+    ]
+
+    # Apply sorting if specified
+    if order_field and order_direction:
+        reverse = order_direction == models.SortOrder.DESCENDING
+        if order_field == 'register_at':
+            users_data.sort(key=lambda x: x['register_at'], reverse=reverse)
+        elif order_field in ['bookmarks', 'nr_ratings']:
+            users_data.sort(key=lambda x: x[order_field], reverse=reverse)
+
+    return users_data
+
+
+async def csv_sessions():
+    conference = await get_current_conference()
+    if not conference:
+        raise HTTPException(status_code=404, detail={"code": "CONFERENCE_NOT_FOUND", "message": "Conference not found"})
+
+    all_sessions = await models.EventSession.filter(conference=conference).prefetch_related('anonymous_rates',
+                                                                                            'lecturers',
+                                                                                            'anonymous_bookmarks').all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Title', 'Speakers', 'Bookmarks', 'Rates', 'Avg rate'])
+
+    for session in all_sessions:
+        title = session.title
+        speakers = ', '.join([lecturer.display_name for lecturer in session.lecturers])
+        bookmarks = len(session.anonymous_bookmarks)
+        rates = len(session.anonymous_rates)
+        avg_rate = sum([r.rate for r in session.anonymous_rates]) / len(
+            session.anonymous_rates) if session.anonymous_rates else None
+
+        writer.writerow([title, speakers, bookmarks, rates, avg_rate])
+
+    output.seek(0)
+
+    filename = f"sfs2024_sessions_on_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            'Content-Disposition': f'attachment; filename="{filename}"'
+        }
+    )
+
+
+async def get_sessions_by_rate(order_field: Optional[str] = None, order_direction: Optional[models.SortOrder] = None):
+    conference = await get_current_conference()
+    if not conference:
+        raise HTTPException(status_code=404, detail={"code": "CONFERENCE_NOT_FOUND", "message": "Conference not found"})
+
+    # Fetch all sessions related to the current conference
+    all_sessions = await models.EventSession.filter(
+        conference=conference
+    ).prefetch_related('anonymous_rates', 'lecturers', 'anonymous_bookmarks').all()
+
+    # Prepare session data
+    sessions_data = [
+        {
+            'title': session.title,
+            'bookmarks': len(session.anonymous_bookmarks),
+            'speakers': ', '.join([lecturer.display_name for lecturer in session.lecturers]),
+            'rates': len(session.anonymous_rates),
+            'avg_rate': sum(r.rate for r in session.anonymous_rates) / len(
+                session.anonymous_rates) if session.anonymous_rates else None
+        }
+        for session in all_sessions
+    ]
+
+    # Apply sorting if specified
+    if order_field and order_direction:
+        reverse = order_direction == models.SortOrder.DESCENDING
+
+        # Sorting for different fields
+        if order_field == 'avg_rate':
+            rated_sessions = [s for s in sessions_data if s['avg_rate'] is not None]
+            unrated_sessions = [s for s in sessions_data if s['avg_rate'] is None]
+
+            rated_sessions.sort(key=lambda x: -x['avg_rate'], reverse=reverse)
+
+            sessions_data = rated_sessions + unrated_sessions
+        elif order_field == 'bookmarks':
+            sessions_data.sort(
+                key=lambda x: (x['bookmarks'] is None, -x['bookmarks'] if x['bookmarks'] is not None else 0),
+                reverse=reverse)
+        elif order_field == 'rates':
+            sessions_data.sort(key=lambda x: (x['rates'] is None, -x['rates'] if x['rates'] is not None else 0),
+                               reverse=reverse)
+
+    return sessions_data
+
+
+async def get_event_summary():
+    conference = await get_current_conference()
+    if not conference:
+        raise HTTPException(status_code=404, detail={"code": "CONFERENCE_NOT_FOUND", "message": "Conference not found"})
+
+    all_users = await models.UserAnonymous.all()
+    all_sessions = await models.EventSession.filter(conference=conference).all()
+    all_bookmarks = await models.AnonymousBookmark.filter(session__conference=conference).all()
+    all_rates = await models.AnonymousRate.filter(session__conference=conference).all()
+
+    return {
+        'all_users': len(all_users),
+        'total_sessions': len(all_sessions),
+        'total_bookmarks': len(all_bookmarks),
+        'total_rates': len(all_rates)
+    }
+
+
+async def get_current_conference():
+    conference = await models.Conference.filter().prefetch_related('tracks',
+                                                                   'locations',
+                                                                   'event_sessions',
+                                                                   'event_sessions__track',
+                                                                   'event_sessions__room',
+                                                                   # 'event_sessions__room__location',
+                                                                   'event_sessions__lecturers',
+                                                                   'rooms',
+                                                                   # 'rooms__location',
+                                                                   'lecturers',
+                                                                   'lecturers__event_sessions',
+                                                                   # 'event_sessions__starred_session',
+
+                                                                   'event_sessions__anonymous_bookmarks',
+                                                                   'event_sessions__anonymous_rates',
+
+                                                                   ).order_by('-created').first()
+
+    if not conference:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail={"code": "CONFERENCE_NOT_FOUND", "message": "conference not found"})
     return conference
 
 
-async def opencon_serialize(conference):
+#
+# async def get_conference(id_conference: uuid.UUID):
+#     conference = await models.Conference.filter(id=id_conference).prefetch_related('tracks',
+#                                                                                    'locations',
+#                                                                                    'event_sessions',
+#                                                                                    'event_sessions__track',
+#                                                                                    'event_sessions__room',
+#                                                                                    # 'event_sessions__room__location',
+#                                                                                    'event_sessions__lecturers',
+#                                                                                    'rooms',
+#                                                                                    # 'rooms__location',
+#                                                                                    'lecturers',
+#                                                                                    'lecturers__event_sessions',
+#                                                                                    # 'event_sessions__starred_session',
+#
+#                                                                                    'event_sessions__anonymous_bookmarks',
+#                                                                                    'event_sessions__anonymous_rates',
+#
+#                                                                                    ).get_or_none()
+#
+#     return conference
+
+
+async def authorize_user(push_notification_token: str = None):
+    # log.info(f"AUTHORIZING NEW ANONYMOUS USER push_notification_token={push_notification_token}")
+    anonymous = models.UserAnonymous()  # push_notification_token=push_notification_token)
+    await anonymous.save()
+    return str(anonymous.id)
+
+
+async def get_user(id_user: uuid.UUID):
+    return await models.UserAnonymous.filter(id=id_user).get_or_none()
+
+
+async def bookmark_session(id_user, id_session):
+    user = await models.UserAnonymous.filter(id=id_user).get_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail={"code": "USER_NOT_FOUND", "message": "user not found"})
+
+    session = await models.EventSession.filter(id=id_session).get_or_none()
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail={"code": "SESSION_NOT_FOUND", "message": "session not found"})
+
+    try:
+        current_bookmark = await models.AnonymousBookmark.filter(user=user, session=session).get_or_none()
+    except Exception as e:
+        raise
+
+    if not current_bookmark:
+        await models.AnonymousBookmark.create(user=user, session=session)
+        return {'bookmarked': True}
+    else:
+        await current_bookmark.delete()
+    return {'bookmarked': False}
+
+
+def now():
+    return datetime.datetime.now()
+
+
+async def rate_session(id_user, id_session, rate):
+    if rate < 1 or rate > 5:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
+                            detail={"code": "RATE_NOT_VALID", "message": "rate not valid, use number between 1 and 5"})
+
+    user = await models.UserAnonymous.filter(id=id_user).get_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail={"code": "USER_NOT_FOUND", "message": "user not found"})
+
+    session = await models.EventSession.filter(id=id_session).get_or_none()
+    if not session:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
+                            detail={"code": "SESSION_NOT_FOUND", "message": "session not found"})
+
+    if not session.rateable:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
+                            detail={"code": "SESSION_IS_NOT_RATEABLE", "message": "session is not rateable"})
+
+    session_start_datetime_str = f'{session.start_date}'
+
+    s_now = str(now())
+    if str(now())[:19] <= session_start_datetime_str[:19]:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
+                            detail={"code": "CAN_NOT_RATE_SESSION_IN_FUTURE",
+                                    "message": "Rating is only possible after the talk has started."})
+
+    try:
+        current_rate = await models.AnonymousRate.filter(user=user, session=session).get_or_none()
+    except Exception as e:
+        raise
+
+    if not current_rate:
+        await models.AnonymousRate.create(user=user, session=session, rate=rate)
+    else:
+        if current_rate.rate != rate:
+            await current_rate.update_from_dict({'rate': rate})
+            await current_rate.save()
+
+    all_rates = await models.AnonymousRate.filter(session=session).all()
+    avg_rate = sum([rate.rate for rate in all_rates]) / len(all_rates) if all_rates else 0
+
+    return {'avg_rate': avg_rate,
+            'total_rates': len(all_rates),
+            }
+
+
+async def do_import_xml(request):
+    content = await fetch_xml_content(request.use_local_xml, request.local_xml_fname)
+    XML_URL = os.getenv("XML_URL", None)
+
+    try:
+        res = await add_conference(content, XML_URL, force=True,
+                                   group_notifications_by_user=request.group_notifications_by_user)
+    except Exception as e:
+        raise
+    conference = res['conference']
+
+    return ConferenceImportRequestResponse(id=str(conference.id), created=res['created'], changes=res['changes'])
+
+
+async def opencon_serialize_static(conference):
+    return await opencon_serialize_anonymous(None, conference)
+
+
+async def opencon_serialize_anonymous(user_id, conference, last_updated=None):
+    next_try_in_ms = 3000000
+    db_last_updated = str(tortoise.timezone.make_naive(conference.last_updated))
+
+    conference_avg_rating = {'rates_by_session': {},
+                             'my_rate_by_session': {}
+                             }
+    for session in conference.event_sessions:
+        if session.anonymous_rates:
+            all_rates_for_session = [r.rate for r in session.anonymous_rates]
+            if all_rates_for_session:
+                conference_avg_rating['rates_by_session'][str(session.id)] = [
+                    sum(all_rates_for_session) / len(all_rates_for_session),
+                    len(all_rates_for_session)]  # [session.anonymous_rates.avg_stars,
+            # session.anonymous_rates.nr_votes]
+
+    if user_id:
+        user = await models.UserAnonymous.filter(id=user_id).prefetch_related('bookmarks', 'rates').get_or_none()
+        bookmarks = [bookmark.session_id for bookmark in user.bookmarks]
+        conference_avg_rating['my_rate_by_session'] = {str(rate.session_id): rate.rate for rate in user.rates}
+    else:
+        bookmarks = []
+
+    if last_updated and last_updated >= db_last_updated:
+        return {'last_updated': db_last_updated,
+                'ratings': conference_avg_rating,
+                'bookmarks': bookmarks,
+                'next_try_in_ms': next_try_in_ms,
+                'conference': None
+                }
+
     db = {}
     idx = {}
 
-    with open(current_file_dir + '/../../tests/assets/sfs2023streaming.yaml', 'r') as f:
+    with open(current_file_dir + '/../../tests/assets/sfs2024streaming.yaml', 'r') as f:
         streaming_links = yaml.load(f, yaml.Loader)
 
     idx['ordered_sponsors'] = []
@@ -536,18 +1112,15 @@ async def opencon_serialize(conference):
     for s in db['sessions'].values():
         days.add(s['date'])
 
-    idx['ordered_lecturers_by_display_name'] = [l['id'] for l in sorted(db['lecturers'].values(), key=lambda x: x['display_name'])]
-    idx['ordered_sessions_by_days'] = {d: [s['id'] for s in db['sessions'].values() if s['date'] == d] for d in sorted(list(days))}
-    idx['ordered_sessions_by_tracks'] = {t: [s['id'] for s in db['sessions'].values() if s['id_track'] == t] for t in db['tracks'].keys()}
+    idx['ordered_lecturers_by_display_name'] = [l['id'] for l in
+                                                sorted(db['lecturers'].values(), key=lambda x: x['display_name'])]
+    idx['ordered_sessions_by_days'] = {d: [s['id'] for s in db['sessions'].values() if s['date'] == d] for d in
+                                       sorted(list(days))}
+    idx['ordered_sessions_by_tracks'] = {t: [s['id'] for s in db['sessions'].values() if s['id_track'] == t] for t in
+                                         db['tracks'].keys()}
     idx['days'] = sorted(list(days))
 
-    conference_avg_rating = {'rates_by_session': {}}
-    for session in conference.event_sessions:
-        if session.starred_session and session.starred_session.nr_votes:
-            conference_avg_rating['rates_by_session'][str(session.id)] = [session.starred_session.avg_stars,
-                                                                          session.starred_session.nr_votes]
-
-    with open(current_file_dir + '/../../tests/assets/sfscon2023sponsors.yaml', 'r') as f:
+    with open(current_file_dir + '/../../tests/assets/sfscon2024sponsors.yaml', 'r') as f:
         db['sponsors'] = yaml.load(f, yaml.Loader)
 
     re_ordered_lecturers = {}
@@ -556,212 +1129,12 @@ async def opencon_serialize(conference):
 
     db['lecturers'] = re_ordered_lecturers
 
-    return {'last_updated': str(tortoise.timezone.make_naive(conference.last_updated)),
-            'conference_avg_rating': conference_avg_rating,
-            'next_try_in_ms': 3000000,
+    return {'last_updated': db_last_updated,
+            'ratings': conference_avg_rating,
+            'next_try_in_ms': next_try_in_ms,
+            'bookmarks': bookmarks,
             'conference': {'acronym': str(conference.acronym),
                            'db': db,
                            'idx': idx
                            }
             }
-
-
-async def get_conference_by_acronym(acronym: str):
-    acronym = 'sfscon-2023'
-    return await models.Conference.filter(acronym=acronym).get_or_none()
-
-
-# def now_timestamp():
-#     return datetime.datetime.now()
-
-
-# def sec2minutes(seconds):
-#     mm = seconds // 60
-#     ss = seconds % 60
-#     return f'{mm}:{ss:02}'
-
-
-# async def extract_all_session_event_which_starts_in_next_5_minutes(conference, now=None):
-#     if not now:
-#         try:
-#             now_time = tortoise.timezone.make_aware(datetime.datetime.now())
-#         except Exception as e:
-#             raise
-#
-#     else:
-#         now_time = now
-#
-#     sessions = await models.EventSession.filter(conference=conference,
-#                                                 start_date__gte=now_time,
-#                                                 start_date__lte=now_time + datetime.timedelta(minutes=5)).all()
-#
-#     to_notify_by_session_emails = {}
-#     to_notify_by_session = {}
-#     if sessions:
-#         for session in sessions:
-#             bookmarkers_to_notify = await models.Bookmark.filter(event_session=session,
-#                                                                  pretix_order__push_notification_token__isnull=False).prefetch_related('pretix_order').all()
-#
-#             to_notify_by_session[str(session.id)] = [str(bookmark.pretix_order.id) for bookmark in bookmarkers_to_notify]
-#             to_notify_by_session_emails[session.title] = {'start_at': str(session.start_date),
-#                                                           'start_in': sec2minutes((session.start_date - now_time).seconds) + ' minutes',
-#                                                           'to_notify': [bookmark.pretix_order.email for bookmark in bookmarkers_to_notify]}
-#
-#     return {'ids': to_notify_by_session,
-#             'human_readable': to_notify_by_session_emails}
-
-
-async def get_csv_attendees(acronym: str):
-    tmp_file = f'/tmp/{uuid.uuid4()}.csv'
-
-    conference = await get_conference_by_acronym(acronym=acronym)
-    if not conference:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="CONFERENCE_NOT_FOUND")
-
-    attendees = await models.PretixOrder.filter(conference=conference,
-                                                nr_printed_labels__gt=0
-                                                ).order_by('first_name').all()
-
-    with open(tmp_file, 'wt') as f:
-
-        writer = csv.writer(f)
-        writer.writerow(['First Name', 'Last Name', 'Email', 'Organization', 'Pretix Order'])
-        for pretix_order in attendees:
-            writer.writerow([pretix_order.first_name,
-                             pretix_order.last_name,
-                             pretix_order.email,
-                             pretix_order.organization,
-                             pretix_order.id_pretix_order
-                             ])
-
-    return tmp_file
-
-
-async def get_csv_talks(acronym: str):
-    tmp_file = f'/tmp/{uuid.uuid4()}.csv'
-
-    conference = await get_conference_by_acronym(acronym=acronym)
-    if not conference:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail="CONFERENCE_NOT_FOUND")
-
-    conference = await get_conference(conference.id)
-    serialized = await opencon_serialize(conference)
-
-    bookmark_per_event = {}
-    for bpe in await models.Bookmark.filter(pretix_order__conference=conference).prefetch_related('pretix_order').all():
-        if str(bpe.event_session_id) not in bookmark_per_event:
-            bookmark_per_event[str(bpe.event_session_id)] = 0
-        bookmark_per_event[str(bpe.event_session_id)] += 1
-
-    rate_per_event = {}
-    for rpe in await models.StarredSession.filter(event_session__conference=conference).prefetch_related('event_session').all():
-        rate_per_event[str(rpe.event_session_id)] = rpe.total_stars / rpe.nr_votes if rpe.nr_votes else ''
-
-
-    with open(tmp_file, 'wt') as f:
-
-        writer = csv.writer(f)
-        writer.writerow(['Event', 'Speakers', 'Date', 'Bookmarks', 'Rating'])
-        for day in serialized['conference']['idx']['ordered_sessions_by_days']:
-            for id_session in serialized['conference']['idx']['ordered_sessions_by_days'][day]:
-                session = serialized['conference']['db']['sessions'][id_session]
-
-                writer.writerow([session['title'],
-                                 ', '.join([serialized['conference']['db']['lecturers'][id_lecturer]['display_name'] for id_lecturer in session['id_lecturers']]),
-                                 session['date'],
-                                 bookmark_per_event[str(id_session)] if id_session in bookmark_per_event else 0,
-                                 rate_per_event[str(id_session)] if str(id_session) in rate_per_event else ''
-                # random.randint(0, 100),
-                                 # round(random.randint(0, 500) / 100, 2)
-                                 ])
-
-    return tmp_file
-
-
-async def add_flow(conference: models.Conference | None, pretix_order: models.PretixOrder | None, text: str | None, data: dict | None = None):
-    if not text and not data:
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE,
-                            detail="TEXT_OR_DATA_MUST_BE_SET")
-
-    if not conference and pretix_order:
-        conference = pretix_order.conference
-
-    flow_id = uuid.uuid4()
-    await models.Flow.create(id=flow_id,
-                             conference=conference,
-                             pretix_order=pretix_order,
-                             text=text,
-                             data=data)
-
-    return {'id': flow_id}
-
-
-async def get_flows(conference: models.Conference, page: int, per_page: int, search: str):
-    offset = (page - 1) * per_page
-
-    query = models.Flow.filter(conference=conference).filter(text__icontains=search)
-
-    flows = await query.order_by('-created_at').offset(offset).limit(per_page).all()
-    count = await query.count()
-
-    summary = {
-        'page': page,
-        'per_page': per_page,
-        'total_count': count,
-        'total_pages': count // per_page + 1 if count % per_page else count // per_page,
-        'previous_page': page - 1 if page > 1 else None,
-        'next_page': page + 1 if page * per_page < count else None,
-    }
-
-    return {'summary': summary, 'items': [flow.serialize() for flow in flows],
-            'columns': [
-                'created',
-                'pretix_order',
-                'text',
-            ]}
-
-
-async def get_dashboard(acronym: str):
-    conference = await get_conference_by_acronym(acronym=acronym)
-
-    organizations = set()
-    for pretix_order in await models.PretixOrder.filter(conference=conference).all():
-        if pretix_order.organization:
-            org = pretix_order.organization.strip().lower()
-            organizations.add(org)
-
-    registered_users = 'N/A'
-    async with httpx.AsyncClient() as client:
-        try:
-            PRETIX_ORGANIZER_ID = os.getenv('PRETIX_ORGANIZER_ID', None)
-            PRETIX_EVENT_ID = os.getenv('PRETIX_EVENT_ID', None)
-            PRETIX_CHECKLIST_ID = os.getenv('PRETIX_CHECKLIST_ID', None)
-            PRETIX_TOKEN = os.getenv('PRETIX_TOKEN', None)
-
-            url = f'https://pretix.eu/api/v1/organizers/{PRETIX_ORGANIZER_ID}/events/{PRETIX_EVENT_ID}/checkinlists/{PRETIX_CHECKLIST_ID}/status/'
-
-            log.debug('Creating get request to ' + url)
-
-            res = await client.get(url, headers={'Authorization': f'Token {PRETIX_TOKEN}'})
-            jres = res.json()
-
-            registered_users = jres['items'][0]['position_count'] + jres['items'][1]['position_count']
-            attendees = jres['items'][0]['checkin_count'] + jres['items'][1]['checkin_count']
-
-        except Exception as e:
-            log.critical(f'Error getting info from pretix')
-
-    from tortoise.queryset import Q
-
-    flt = Q(Q(conference=conference), Q(Q(registered_in_open_con_app=True), Q(registered_from_device_type__isnull=False), join_type='OR'), join_type='AND')
-
-    return [
-        {'name': 'Registered users', 'value': registered_users},
-        {'name': 'Attendees', 'value': attendees},
-        {'name': 'SFSCON app users', 'value': await models.PretixOrder.filter(flt).count()},
-        {'name': 'Organisations', 'value': len(organizations)},
-        {'name': 'Total bookmarks', 'value': await models.Bookmark.filter(event_session__conference=conference).prefetch_related('event_session').count()},
-        {'name': 'Ratings received', 'value': await models.Star.filter(event_session__conference=conference).prefetch_related('event_session').count()}
-    ]

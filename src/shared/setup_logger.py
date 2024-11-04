@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2023 Digital CUBE <https://digitalcube.rs>
 
-import os
-import redis
 import logging
+import os
+
+import redis
 
 
 class RedisHandler(logging.Handler):
@@ -40,7 +41,7 @@ def setup_file_logger(service: str):
     logger = logging.getLogger(f'{service}_logger')
     logger.setLevel(logging.INFO)
 
-    handler = logging.FileHandler(f'/var/log/opencon/{service}.log')
+    handler = logging.FileHandler(f'/var/log/opencon/svc_{service}.log')
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - XXX - %(message)s')
 
     handler.setFormatter(formatter)
