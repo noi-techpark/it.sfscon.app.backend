@@ -22,6 +22,4 @@ RUN chmod +x /start.sh
 
 COPY ./src/scripts /scripts
 
-# COPY ./aws.credentials /root/.aws/credentials
-
 CMD ["./start.sh"]
