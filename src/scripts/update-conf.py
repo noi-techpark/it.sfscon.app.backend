@@ -89,13 +89,13 @@ async def get_static_conference():
         
                 
 def send_to_s3(fname):
-    list_buckets()
-    list_files_in_a_bucket('sfscon')
+    # list_buckets()
+    list_files_in_a_bucket('sfscon-backend-failover')
 
-    upload_file(fname, 'sfscon')
+    upload_file(fname, 'sfscon-backend-failover')
     
-    list_files_in_a_bucket('sfscon')
-    download_file_from_bucket(fname, 'sfscon', 'downloaded.sfs2024.json')
+    list_files_in_a_bucket('sfscon-backend-failover')
+    download_file_from_bucket(fname, 'sfscon-backend-failover', 'downloaded.sfs2024.json')
         
         
 async def main():
