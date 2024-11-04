@@ -1,15 +1,5 @@
 services:
   
-  webserver:
-    image: ${DOCKER_IMAGE_WEBSERVER}:${DOCKER_TAG}
-    depends_on:
-      conferences:
-        condition: service_started
-      push_notifications:
-        condition: service_started
-    ports:
-      - 8001:80
-
   conferences:
     image: ${DOCKER_IMAGE}:${DOCKER_TAG}
     command: uvicorn main:app --host 0.0.0.0 --reload # sleep 9999999999
@@ -20,6 +10,7 @@ services:
     volumes:
       - opencon-logs:/var/log/opencon
       - .aws.credentials:/root/.aws/credentials
+    healthcheck:
       test: curl --fail http://localhost:8000/openapi.json || exit 1
       interval: 30s
       retries: 3
