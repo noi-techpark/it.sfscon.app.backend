@@ -51,7 +51,7 @@ jobs:
           
           X_LANE_USERNAME_PREFIX: ${{ secrets.ADMIN_USERNAME }}
 
-          X_XML_URL: "https://www.sfscon.it/?calendar=2024&format=xml"
+          X_XML_URL: "https://www.sfscon.it/?calendar=2025&format=xml"
           X_REDIS_SERVER: redis
 
       - name: Create .aws.credentials file and inject values
