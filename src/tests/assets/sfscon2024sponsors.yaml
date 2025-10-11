@@ -20,24 +20,24 @@
   sponsor_type: normal
   logo_url: https://www.sfscon.it/wp-content/uploads/2022/10/VATES_BN.png
   url: https://vates.fr/
-  width: 180px
-  height: 53.43px
+  width: 202px
+  height: 60px
 - id: 127d0b97-87fd-454e-822e-77fb7367ce28
   name: Alpitronic
   acronym: alpitronic
   logo_url: https://www.sfscon.it/wp-content/uploads/2025/06/ALPITRONIC_BN.png
   url: https://www.alpitronic.it/
   sponsor_type: normal
-  width: 180px
-  height: 71.16px
+  width: 170px
+  height: 67px
 - id: ec28824e-349d-42f2-9eef-c29b670ee831
   acronym: ldv20
   name: LDV20
   logo_url: https://www.sfscon.it/wp-content/uploads/2025/09/LDV20_Pwd-by-SPK_Black-2.png
   url: https://www.ldv20.com/
   sponsor_type: normal
-  width: 128px
-  height: 70px
+  width: 110px
+  height: 60px
 - id: e68950c1-eda9-48c8-8fc4-5ef987228ce2
   acronym: madeincima
   name: Made In Cima
@@ -52,24 +52,24 @@
   logo_url: https://www.sfscon.it/wp-content/uploads/2025/05/pandigital_logo_logo_black.png
   url: http://www.pan.digital/
   sponsor_type: normal
-  width: 128px
-  height: 70px
+  width: 140px
+  height: 77px
 - id: 1dc0bdd1-9c10-4508-9343-553f000769fa
   acronym: zirkon-zahn
   name: Zirkonzahn
   logo_url: https://www.sfscon.it/wp-content/uploads/2024/06/Zirkonzahn-Logo-mit-Slogan.png
   url: https://zirkonzahn.com/
   sponsor_type: normal
-  width: 128px
-  height: 70px
+  width: 150px
+  height: 82px
 - id: 184da88c-f090-4cf9-958c-22b84c0fe8d4
   acronym: '1006'
   name: 1006.org
   logo_url: https://www.sfscon.it/wp-content/uploads/2017/07/1006org_logo.jpg
   url: https://www.1006.org/
   sponsor_type: normal
-  width: 101px
-  height: 20px
+  width: 202px
+  height: 40px
 - id: 101c39b0-24ab-474b-a747-459a6a61660d
   acronym: catchsolve
   name: Catch Solve
@@ -100,8 +100,8 @@
   logo_url: https://m.opencon.dev/static/Peer_BN.png
   url: https://www.peer.biz/de/
   sponsor_type: normal
-  width: 80px
-  height: 30.66px
+  width: 57px
+  height: 22px
 - id: bb73d7b7-3fac-4be6-9bfe-1eea8c0d7856
   acronym: rmbtec
   name: Rmbtec
