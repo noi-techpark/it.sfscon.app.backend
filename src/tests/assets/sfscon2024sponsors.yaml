@@ -6,6 +6,22 @@
   url: https://www.gruppofos.it/
   width: 282px
   height: 102px
+- id: 5f1e9ccc-cf71-441e-81e0-c40dc34a677e
+  acronym: linaro
+  name: Linaro
+  sponsor_type: main
+  logo_url: https://www.sfscon.it/wp-content/uploads/2026/10/Loghi_Website_02.png
+  url: https://www.linaro.org/
+  width: 202px
+  height: 60px
+- id: 127d0b97-87fd-454e-822e-77fb7367ce28
+  name: Sidera
+  acronym: sidera
+  logo_url: https://www.sfscon.it/wp-content/uploads/2026/10/Loghi_Website_03.png
+  url: https://www.sidera.it/
+  sponsor_type: main
+  width: 170px
+  height: 67px
 - id: 4dad81f6-e1e2-478e-9406-80b5987204dc
   acronym: telmekom
   name: Telmekom
@@ -14,30 +30,22 @@
   url: http://www.telmekom.net/
   width: 284px
   height: 86px
-- id: 5f1e9ccc-cf71-441e-81e0-c40dc34a677e
-  acronym: vates
-  name: Vates
-  sponsor_type: normal
-  logo_url: https://www.sfscon.it/wp-content/uploads/2022/10/VATES_BN.png
-  url: https://vates.fr/
-  width: 202px
-  height: 60px
-- id: 127d0b97-87fd-454e-822e-77fb7367ce28
-  name: Alpitronic
-  acronym: alpitronic
-  logo_url: https://www.sfscon.it/wp-content/uploads/2025/06/ALPITRONIC_BN.png
-  url: https://www.alpitronic.it/
-  sponsor_type: normal
-  width: 170px
-  height: 67px
 - id: ec28824e-349d-42f2-9eef-c29b670ee831
-  acronym: ldv20
-  name: LDV20
-  logo_url: https://www.sfscon.it/wp-content/uploads/2025/09/LDV20_Pwd-by-SPK_Black-2.png
-  url: https://www.ldv20.com/
+  acronym: bosch
+  name: BOSCH
+  logo_url: https://www.sfscon.it/wp-content/uploads/2026/07/Loghi_Website_05_v2.png
+  url: https://eu.bosch-sds.com/
   sponsor_type: normal
   width: 110px
   height: 60px
+- id: 3f7a2c9e-81b4-4d0f-a6e3-9c52b17d04fa
+  acronym: checkmk
+  name: Check-mk
+  logo_url: https://www.sfscon.it/wp-content/uploads/2026/05/checkmk_BN-scaled.png
+  url: https://checkmk.com/
+  sponsor_type: normal
+  width: 128px
+  height: 70px
 - id: e68950c1-eda9-48c8-8fc4-5ef987228ce2
   acronym: madeincima
   name: Made In Cima
@@ -53,7 +61,15 @@
   url: http://www.pan.digital/
   sponsor_type: normal
   width: 140px
-  height: 77px
+  height: 77px  
+- id: b82e0d47-5c19-4a6b-9f30-e7d4a18c62b5
+  acronym: rise
+  name: Rise
+  logo_url: https://www.sfscon.it/wp-content/uploads/2026/05/Logo_RISE_1-scaled.png
+  url: https://www.rise-world.com/
+  sponsor_type: normal
+  width: 150px
+  height: 82px
 - id: 1dc0bdd1-9c10-4508-9343-553f000769fa
   acronym: zirkon-zahn
   name: Zirkonzahn
@@ -70,6 +86,14 @@
   sponsor_type: normal
   width: 202px
   height: 40px
+- id: efaf9b4d-f856-4957-9f65-42307bfe7f61
+  acronym: alineas
+  name: Alineas
+  logo_url: https://www.sfscon.it/wp-content/uploads/2026/07/Alineas-2-scaled.png
+  url: https://www.alineas.it/
+  sponsor_type: normal
+  width: 90px
+  height: 22.28px
 - id: 101c39b0-24ab-474b-a747-459a6a61660d
   acronym: catchsolve
   name: Catch Solve
@@ -78,19 +102,27 @@
   sponsor_type: normal
   width: 128px
   height: 32px
-- id: d73fd57b-980e-425d-96df-857e245556a2
-  acronym: christian-gapp
-  name: Christian Gapp
-  logo_url: https://www.sfscon.it/wp-content/uploads/2024/07/christian-gapp.png
-  url: https://gappc.net/
+- id: f542abc0-c94b-4459-82ed-9acf814fefae
+  acronym: ithel
+  name: ithel
+  logo_url: https://www.sfscon.it/wp-content/uploads/2026/06/ITHEL-Logo-BN-scaled.png
+  url: https://www.ithel.it/
   sponsor_type: normal
   width: 90px
   height: 22.28px
-- id: efaf9b4d-f856-4957-9f65-42307bfe7f61
-  acronym: deda.next
-  name: deda.next
-  logo_url: https://www.sfscon.it/wp-content/uploads/2025/06/DedaNext_Logo-1.png
-  url: https://www.dedanext.it/
+- id: 2244636e-19ad-4edd-b537-da40368a904e
+  acronym: limitis
+  name: Limitis
+  logo_url: https://www.sfscon.it/wp-content/uploads/2026/06/Limitis-BN-1.jpg
+  url: https://limitis.com/
+  sponsor_type: normal
+  width: 90px
+  height: 22.28px
+- id: d73fd57b-980e-425d-96df-857e245556a2
+  acronym: lynq.ing
+  name: lynq.ing
+  logo_url: https://www.sfscon.it/wp-content/uploads/2026/06/lynq-BN.png
+  url: https://lynq.ing/
   sponsor_type: normal
   width: 90px
   height: 22.28px
@@ -110,22 +142,6 @@
   sponsor_type: normal
   width: 40px
   height: 50.91px
-- id: f542abc0-c94b-4459-82ed-9acf814fefae
-  acronym: simedia
-  name: SiMedia
-  logo_url: https://www.sfscon.it/wp-content/uploads/2025/07/logoBN_SiMedia.png
-  url: https://www.simedia.com/
-  sponsor_type: normal
-  width: 90px
-  height: 22.28px
-- id: 2244636e-19ad-4edd-b537-da40368a904e
-  acronym: aabs
-  name: Suedtirol Business School
-  logo_url: https://www.sfscon.it/wp-content/uploads/2025/06/SBS_Logo.png
-  url: https://www.business-school.bz/
-  sponsor_type: normal
-  width: 90px
-  height: 22.28px
 - id: d557c64e-33f4-4641-abd2-83ad89524efa
   acronym: suggesto
   name: Suggesto
