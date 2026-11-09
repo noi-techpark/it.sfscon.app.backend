@@ -2,7 +2,7 @@
   name: Gruppo Fos
   acronym: gruppo-fos
   sponsor_type: main
-  logo_url: https://www.sfscon.it/wp-content/uploads/2019/10/GRUPPOFOS_BN.png
+  logo_url: https://www.sfscon.it/wp-content/uploads/2026/10/Loghi_Website_01.png
   url: https://www.gruppofos.it/
   width: 282px
   height: 102px
@@ -49,7 +49,7 @@
 - id: e68950c1-eda9-48c8-8fc4-5ef987228ce2
   acronym: madeincima
   name: Made In Cima
-  logo_url: https://www.sfscon.it/wp-content/uploads/2017/07/MADEINCIMA_BN.png
+  logo_url: https://www.sfscon.it/wp-content/uploads/2017/07/Made-in-Cima-2025-Marchio-RGB-to_evolve-bw.png
   url: https://www.madeincima.it/
   sponsor_type: normal
   width: 128px
@@ -129,7 +129,7 @@
 - id: e9c0d83a-26f5-4ed0-8162-09ab28c2ddda
   acronym: peer
   name: Peer
-  logo_url: https://m.opencon.dev/static/Peer_BN.png
+  logo_url: https://www.sfscon.it/wp-content/uploads/2017/07/Peer_BN.png
   url: https://www.peer.biz/de/
   sponsor_type: normal
   width: 57px
@@ -137,7 +137,7 @@
 - id: bb73d7b7-3fac-4be6-9bfe-1eea8c0d7856
   acronym: rmbtec
   name: Rmbtec
-  logo_url: https://m.opencon.dev/static/RMB_BN.png
+  logo_url: https://www.sfscon.it/wp-content/uploads/2024/09/RMB-Tec.png
   url: https://rmbtec.com/
   sponsor_type: normal
   width: 40px
